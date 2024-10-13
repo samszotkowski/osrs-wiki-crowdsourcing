@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.events.ChatMessage;
+import net.runelite.api.events.GameTick;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.Subscribe;
@@ -55,6 +56,8 @@ public class CrowdsourcingLootClues {
     private static final int CLUE_WARNING_DISABLED = 1;
 
     private static final String ROGUE_MESSAGE = "Your rogue clothing allows you to steal twice as much loot!";
+
+    private static String pickpocketTarget = null;
 
     private boolean hasChargedRingOfWealth()
     {
@@ -143,12 +146,11 @@ public class CrowdsourcingLootClues {
             NPC npc = event.getMenuEntry().getNpc();
             if (npc != null)
             {
-                LootClueData pendingLoot = new LootClueData();
-                pendingLoot.setType("CLICK_PICKPOCKET");
-                pendingLoot.setName(npc.getName());
-                storeEvent(pendingLoot);
+                pickpocketTarget = npc.getName();
+                return;
             }
         }
+        pickpocketTarget = null;
     }
 
     @Subscribe
@@ -163,16 +165,30 @@ public class CrowdsourcingLootClues {
         String message = event.getMessage();
         if (CLUE_MESSAGE.matcher(message).matches())
         {
-            LootClueData pendingLoot = new LootClueData();
-            pendingLoot.setMessage(message);
-            storeEvent(pendingLoot);
+            LootClueData pendingData = new LootClueData();
+            pendingData.setMessage(message);
+            storeEvent(pendingData);
             return;
         }
         if (ROGUE_MESSAGE.equals(message))
         {
-            LootClueData pendingLoot = new LootClueData();
-            pendingLoot.setMessage(message);
-            storeEvent(pendingLoot);
+            LootClueData pendingData = new LootClueData();
+            pendingData.setMessage(message);
+            storeEvent(pendingData);
+        }
+    }
+
+    @Subscribe
+    public void onGameTick(GameTick event)
+    {
+        // only store last pickpocket click to happen on this tick
+        if (pickpocketTarget != null)
+        {
+            LootClueData pendingData = new LootClueData();
+            pendingData.setName(pickpocketTarget);
+            pendingData.setType("CLICK_PICKPOCKET");
+            storeEvent(pendingData);
+            pickpocketTarget = null;
         }
     }
 
