@@ -162,6 +162,11 @@ public class CrowdsourcingLootClues {
     @Subscribe
     public void onGameTick(GameTick event)
     {
+        if (pickpocketClickTick == -1)
+        {
+            return;
+        }
+
         if (client.getTickCount() >= pickpocketClickTick + PICKPOCKET_DELAY)
         {
             pickpocketTarget = null;
