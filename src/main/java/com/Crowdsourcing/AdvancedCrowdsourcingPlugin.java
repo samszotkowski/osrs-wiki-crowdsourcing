@@ -151,7 +151,6 @@ public class AdvancedCrowdsourcingPlugin extends Plugin
 		experience.startUp();
 		pyramidPlunder.startUp();
 		stars.reset();
-		lootClues.startUp();
 	}
 
 	@Override

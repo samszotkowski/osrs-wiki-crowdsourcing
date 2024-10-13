@@ -65,16 +65,11 @@ public class CrowdsourcingLootClues {
 
     private static final String ROGUE_MESSAGE = "Your rogue clothing allows you to steal twice as much loot!";
 
-    // metadata
-    private Set<String> casClaimed;
-    private Set<String> disabledClueWarnings;
-
     // state
-    private String pickpocketTarget;
-    private LootClueData pendingLoot;
-    private boolean lootReceived;
+    private String pickpocketTarget = null;
+    private LootClueData pendingLoot = new LootClueData();
+    private boolean lootReceived = false;
 
-    // TODO: probably better to monitor onItemContainerChanged rather than checking on every single loot
     private boolean hasChargedRingOfWealth()
     {
         ItemContainer equipmentContainer = client.getItemContainer(InventoryID.EQUIPMENT);
@@ -91,6 +86,42 @@ public class CrowdsourcingLootClues {
                 equipmentContainer.contains(ItemID.RING_OF_WEALTH_I3) ||
                 equipmentContainer.contains(ItemID.RING_OF_WEALTH_I4) ||
                 equipmentContainer.contains(ItemID.RING_OF_WEALTH_I5);
+    }
+
+    private List<String> getCasClaimed()
+    {
+        List<String> casClaimed = new ArrayList<>();
+        clientThread.invoke(() -> {
+            for (Map.Entry<Integer, String> entry : VARBITS_CA.entrySet())
+            {
+                int varbitId = entry.getKey();
+                String caTier = entry.getValue();
+                int value = client.getVarbitValue(varbitId);
+                boolean caClaimed = value == CA_CLAIMED;
+                if (caClaimed) {
+                    casClaimed.add(caTier);
+                }
+            }
+        });
+        return casClaimed;
+    }
+
+    private List<String> getClueWarningSettings()
+    {
+        List<String> disabledClueWarnings = new ArrayList<>();
+        clientThread.invoke(() -> {
+            for (Map.Entry<Integer, String> entry : VARBITS_CLUE_WARNINGS.entrySet())
+            {
+                int varbitId = entry.getKey();
+                String clueTier = entry.getValue();
+                int value = client.getVarbitValue(varbitId);
+                boolean warningDisabled = value == CLUE_WARNING_DISABLED;
+                if (warningDisabled) {
+                    disabledClueWarnings.add(clueTier);
+                }
+            }
+        });
+        return disabledClueWarnings;
     }
 
     @Subscribe
@@ -138,7 +169,7 @@ public class CrowdsourcingLootClues {
         }
         if (ROGUE_MESSAGE.equals(message))
         {
-            pendingLoot.addMetadata("rogueEquipmentDoubled", true);
+            pendingLoot.addMessage(ROGUE_MESSAGE);
         }
     }
 
@@ -157,132 +188,17 @@ public class CrowdsourcingLootClues {
         pickpocketTarget = null;
     }
 
-    private void resetLoot()
+    private void reset()
     {
         pendingLoot = new LootClueData();
         lootReceived = false;
     }
 
-    private void reset()
-    {
-        resetLoot();
-        pickpocketTarget = null;
-        casClaimed = new HashSet<>();
-        disabledClueWarnings = new HashSet<>();
-    }
-
-    @Subscribe
-    public void onVarbitChanged(VarbitChanged varbitChanged)
-    {
-        int varbitId = varbitChanged.getVarbitId();
-        if (VARBITS_CA.containsKey(varbitId))
-        {
-            String caTier = VARBITS_CA.get(varbitId);
-            int newValue = varbitChanged.getValue();
-            boolean caClaimed = newValue == CA_CLAIMED;
-            if (caClaimed)
-            {
-                casClaimed.add(caTier);
-            }
-            else
-            {
-                casClaimed.remove(caTier);
-            }
-//            log.info("(varb change) Combat achievements: " + casClaimed);
-        }
-        if (VARBITS_CLUE_WARNINGS.containsKey(varbitId))
-        {
-            String clueTier = VARBITS_CLUE_WARNINGS.get(varbitId);
-            int newValue = varbitChanged.getValue();
-            boolean warningDisabled = newValue == CLUE_WARNING_DISABLED;
-            if (warningDisabled)
-            {
-                disabledClueWarnings.add(clueTier);
-            }
-            else
-            {
-                disabledClueWarnings.remove(clueTier);
-            }
-//            log.info("(varb change) Clue warnings disabled: " + disabledClueWarnings);
-        }
-    }
-
-    // same as onVarbitChanged, except we're refreshing all of them instead of just one
-    // TODO: probably ought to combine this with onVarbitChanged since it's largely duplicated
-    public void loadVarbitData()
-    {
-        clientThread.invokeLater(() -> {
-            for (Map.Entry<Integer, String> entry : VARBITS_CA.entrySet()) {
-                int varbitId = entry.getKey();
-                String caTier = entry.getValue();
-                int newValue = client.getVarbitValue(varbitId);
-                boolean caClaimed = newValue == CA_CLAIMED;
-                if (caClaimed)
-                {
-                    casClaimed.add(caTier);
-                }
-                else
-                {
-                    casClaimed.remove(caTier);
-                }
-            }
-//            log.info("(startup) Combat achievements: " + casClaimed);
-
-            for (Map.Entry<Integer, String> entry : VARBITS_CLUE_WARNINGS.entrySet()) {
-                int varbitId = entry.getKey();
-                String clueTier = entry.getValue();
-                int newValue = client.getVarbitValue(varbitId);
-                boolean warningDisabled = newValue == CLUE_WARNING_DISABLED;
-                if (warningDisabled)
-                {
-                    disabledClueWarnings.add(clueTier);
-                }
-                else
-                {
-                    disabledClueWarnings.remove(clueTier);
-                }
-            }
-//            log.info("(startup) Clue warnings disabled: " + disabledClueWarnings);
-        });
-    }
-
-    public void startUp()
-    {
-        // get fresh data when plugin gets turned on. if not logged in, onGameStateChanged will handle it
-        if (client.getGameState() == GameState.LOGGED_IN)
-        {
-            reset();
-            loadVarbitData();
-        }
-    }
-
-    private boolean loggingIn = false;
-    @Subscribe
-    public void onGameStateChanged(GameStateChanged event)
-    {
-        GameState gameState = event.getGameState();
-        if (gameState == GameState.LOGGING_IN)
-        {
-            loggingIn = true;
-        }
-        else if (loggingIn && gameState == GameState.LOGGED_IN)
-        {
-            reset();
-            loggingIn = false;
-        }
-    }
-
     public void addUniversalMetadata()
     {
         pendingLoot.setLocation(client.getLocalPlayer().getWorldLocation());
-        if (!casClaimed.isEmpty())
-        {
-            pendingLoot.addMetadata("combatAchievements", casClaimed);
-        }
-        if (!disabledClueWarnings.isEmpty())
-        {
-            pendingLoot.addMetadata("clueWarningsDisabled", disabledClueWarnings);
-        }
+        pendingLoot.addMetadata("combatAchievements", getCasClaimed());
+        pendingLoot.addMetadata("clueWarningsDisabled", getClueWarningSettings());
     }
 
     @Subscribe
@@ -298,11 +214,12 @@ public class CrowdsourcingLootClues {
             pendingLoot.setName(pickpocketTarget);
             pendingLoot.setCombatLevel(-1);
             pendingLoot.setType(LootRecordType.PICKPOCKET);
+            // do not nullify pickpocketTarget here in case of auto-pickpocket wealthy citizens
         }
 
         addUniversalMetadata();
-//        log.info(String.valueOf(pendingLoot));
-        manager.storeEvent(pendingLoot);
-        resetLoot();
+        log.info(String.valueOf(pendingLoot));
+//        manager.storeEvent(pendingLoot);
+        reset();
     }
 }
