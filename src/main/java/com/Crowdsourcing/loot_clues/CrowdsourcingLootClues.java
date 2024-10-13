@@ -59,6 +59,8 @@ public class CrowdsourcingLootClues {
     private static final Pattern CLUE_MESSAGE = Pattern.compile("You have a sneaking suspicion.*");
     private static final int CLUE_WARNING_DISABLED = 1;
 
+    private static final String ROGUE_MESSAGE = "Your rogue clothing allows you to steal twice as much loot!";
+
     // metadata
     private Set<String> casClaimed;
     private Set<String> disabledClueWarnings;
@@ -155,7 +157,8 @@ public class CrowdsourcingLootClues {
     @Subscribe
     public void onChatMessage(ChatMessage event)
     {
-        if (event.getType() != ChatMessageType.GAMEMESSAGE)
+        ChatMessageType messageType = event.getType();
+        if (messageType != ChatMessageType.GAMEMESSAGE && messageType != ChatMessageType.SPAM)
         {
             return;
         }
@@ -165,6 +168,10 @@ public class CrowdsourcingLootClues {
         {
             pendingLoot.addMessage(message);
             lootReceived = true;
+        }
+        if (ROGUE_MESSAGE.equals(message))
+        {
+            pendingLoot.addMetadata("rogueEquipmentDoubled", true);
         }
     }
 
