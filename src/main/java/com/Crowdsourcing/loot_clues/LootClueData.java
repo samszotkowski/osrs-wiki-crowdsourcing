@@ -12,11 +12,12 @@ import net.runelite.http.api.loottracker.LootRecordType;
 public class LootClueData {
     private String name;
     private int combatLevel;
-    private LootRecordType type;
+    private String type;
+    private ArrayList<HashMap<String, Integer>> drops;
+    private String message;
     private WorldPoint location;
     private HashMap<String, Object> metadata;
-    private ArrayList<String> messages;
-    private ArrayList<HashMap<String, Integer>> drops;
+    private int tick;
 
     public LootClueData()
     {
@@ -25,11 +26,11 @@ public class LootClueData {
         type = null;
         location = null;
         metadata = null;
-        messages = null;
+        message = null;
         drops = null;
     }
 
-    public void addDrop(String itemName, int quantity)
+    public void addDrop(int itemId, int quantity)
     {
         if (this.drops == null)
         {
@@ -38,20 +39,11 @@ public class LootClueData {
 
         HashMap<String, Integer> drop = new HashMap<>() {
             {
-                put(itemName, quantity);
+                put("id", itemId);
+                put("qty", quantity);
             }
         };
         this.drops.add(drop);
-    }
-
-    public void addMessage(String message)
-    {
-        if (this.messages == null)
-        {
-            this.messages = new ArrayList<>();
-        }
-
-        this.messages.add(message);
     }
 
     public void addMetadata(String key, Object value)

@@ -2,24 +2,18 @@ package com.Crowdsourcing.loot_clues;
 
 import com.Crowdsourcing.CrowdsourcingManager;
 import javax.inject.Inject;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.ChatMessageType;
-import net.runelite.api.Client;
-import net.runelite.api.GameState;
-import net.runelite.api.InventoryID;
-import net.runelite.api.ItemContainer;
-import net.runelite.api.ItemID;
-import net.runelite.api.NPC;
+import net.runelite.api.*;
 import net.runelite.api.events.ChatMessage;
-import net.runelite.api.events.GameStateChanged;
-import net.runelite.api.events.GameTick;
 import net.runelite.api.events.MenuOptionClicked;
-import net.runelite.api.events.VarbitChanged;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.Subscribe;
-import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.ItemStack;
 import net.runelite.client.plugins.loottracker.LootReceived;
 import net.runelite.http.api.loottracker.LootRecordType;
@@ -34,9 +28,6 @@ public class CrowdsourcingLootClues {
 
     @Inject
     CrowdsourcingManager manager;
-
-    @Inject
-    ItemManager itemManager;
 
     private static final Map<Integer, String> VARBITS_CA = new HashMap<>() {
         {
@@ -64,11 +55,6 @@ public class CrowdsourcingLootClues {
     private static final int CLUE_WARNING_DISABLED = 1;
 
     private static final String ROGUE_MESSAGE = "Your rogue clothing allows you to steal twice as much loot!";
-
-    // state
-    private String pickpocketTarget = null;
-    private LootClueData pendingLoot = new LootClueData();
-    private boolean lootReceived = false;
 
     private boolean hasChargedRingOfWealth()
     {
@@ -127,29 +113,42 @@ public class CrowdsourcingLootClues {
     @Subscribe
     public void onLootReceived(LootReceived event)
     {
-        String name = event.getName();
-        int combatLevel = event.getCombatLevel();
-        LootRecordType type = event.getType();
+        LootClueData pendingLoot = new LootClueData();
 
-        if (type == LootRecordType.NPC || name.toUpperCase().startsWith("TZHAAR"))
-        {
-            pendingLoot.addMetadata("hasRingOfWealth", hasChargedRingOfWealth());
-        }
+        pendingLoot.setName(event.getName());
+        pendingLoot.setCombatLevel(event.getCombatLevel());
+        pendingLoot.setType(event.getType().name());
 
-        ArrayList<HashMap<String, Integer>> drops = new ArrayList<>();
         Collection<ItemStack> items = event.getItems();
         for (ItemStack item: items)
         {
             int itemId = item.getId();
-            String itemName = itemManager.getItemComposition(itemId).getName();
             int quantity = item.getQuantity();
-            pendingLoot.addDrop(itemName, quantity);
+            pendingLoot.addDrop(itemId, quantity);
         }
 
-        pendingLoot.setName(name);
-        pendingLoot.setCombatLevel(combatLevel);
-        pendingLoot.setType(type);
-        lootReceived = true;
+        if (event.getType() == LootRecordType.NPC || event.getName().toUpperCase().startsWith("TZHAAR"))
+        {
+            pendingLoot.addMetadata("hasRingOfWealth", hasChargedRingOfWealth());
+        }
+
+        storeEvent(pendingLoot);
+    }
+
+    @Subscribe
+    public void onMenuOptionClicked(MenuOptionClicked event)
+    {
+        if (event.getMenuOption().equals("Pickpocket"))
+        {
+            NPC npc = event.getMenuEntry().getNpc();
+            if (npc != null)
+            {
+                LootClueData pendingLoot = new LootClueData();
+                pendingLoot.setType("CLICK_PICKPOCKET");
+                pendingLoot.setName(npc.getName());
+                storeEvent(pendingLoot);
+            }
+        }
     }
 
     @Subscribe
@@ -164,62 +163,31 @@ public class CrowdsourcingLootClues {
         String message = event.getMessage();
         if (CLUE_MESSAGE.matcher(message).matches())
         {
-            pendingLoot.addMessage(message);
-            lootReceived = true;
+            LootClueData pendingLoot = new LootClueData();
+            pendingLoot.setMessage(message);
+            storeEvent(pendingLoot);
+            return;
         }
         if (ROGUE_MESSAGE.equals(message))
         {
-            pendingLoot.addMessage(ROGUE_MESSAGE);
+            LootClueData pendingLoot = new LootClueData();
+            pendingLoot.setMessage(message);
+            storeEvent(pendingLoot);
         }
     }
 
-    @Subscribe
-    public void onMenuOptionClicked(MenuOptionClicked event)
+    public void addUniversalMetadata(LootClueData data)
     {
-        if (event.getMenuOption().equals("Pickpocket"))
-        {
-            NPC npc = event.getMenuEntry().getNpc();
-            if (npc != null)
-            {
-                pickpocketTarget = npc.getName();
-                return;
-            }
-        }
-        pickpocketTarget = null;
+        data.setTick(client.getTickCount());
+        data.setLocation(client.getLocalPlayer().getWorldLocation());
+        data.addMetadata("combatAchievements", getCasClaimed());
+        data.addMetadata("clueWarningsDisabled", getClueWarningSettings());
     }
 
-    private void reset()
+    public void storeEvent(LootClueData data)
     {
-        pendingLoot = new LootClueData();
-        lootReceived = false;
-    }
-
-    public void addUniversalMetadata()
-    {
-        pendingLoot.setLocation(client.getLocalPlayer().getWorldLocation());
-        pendingLoot.addMetadata("combatAchievements", getCasClaimed());
-        pendingLoot.addMetadata("clueWarningsDisabled", getClueWarningSettings());
-    }
-
-    @Subscribe
-    public void onGameTick(GameTick event)
-    {
-        if (!lootReceived)
-        {
-            return;
-        }
-
-        if (pickpocketTarget != null)
-        {
-            pendingLoot.setName(pickpocketTarget);
-            pendingLoot.setCombatLevel(-1);
-            pendingLoot.setType(LootRecordType.PICKPOCKET);
-            // do not nullify pickpocketTarget here in case of auto-pickpocket wealthy citizens
-        }
-
-        addUniversalMetadata();
-        log.info(String.valueOf(pendingLoot));
-//        manager.storeEvent(pendingLoot);
-        reset();
+        addUniversalMetadata(data);
+        log.info(String.valueOf(data));
+//        manager.storeEvent(data);
     }
 }
