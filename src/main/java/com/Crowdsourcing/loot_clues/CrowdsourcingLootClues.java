@@ -74,40 +74,23 @@ public class CrowdsourcingLootClues {
     private LootClueData pendingLoot;
     private boolean lootReceived;
 
-    @Subscribe
-    public void onVarbitChanged(VarbitChanged varbitChanged)
+    // TODO: probably better to monitor onItemContainerChanged rather than checking on every single loot
+    private boolean hasChargedRingOfWealth()
     {
-        int varbitId = varbitChanged.getVarbitId();
-        if (VARBITS_CA.containsKey(varbitId))
-        {
-            String caTier = VARBITS_CA.get(varbitId);
-            int newValue = varbitChanged.getValue();
-            boolean caClaimed = newValue == CA_CLAIMED;
-            if (caClaimed)
-            {
-                casClaimed.add(caTier);
-            }
-            else
-            {
-                casClaimed.remove(caTier);
-            }
-//            log.info("Combat achievements: " + casClaimed);
+        ItemContainer equipmentContainer = client.getItemContainer(InventoryID.EQUIPMENT);
+        if (equipmentContainer == null) {
+            return false;
         }
-        if (VARBITS_CLUE_WARNINGS.containsKey(varbitId))
-        {
-            String clueTier = VARBITS_CLUE_WARNINGS.get(varbitId);
-            int newValue = varbitChanged.getValue();
-            boolean warningDisabled = newValue == CLUE_WARNING_DISABLED;
-            if (warningDisabled)
-            {
-                disabledClueWarnings.add(clueTier);
-            }
-            else
-            {
-                disabledClueWarnings.remove(clueTier);
-            }
-//            log.info("Clue warnings disabled: " + disabledClueWarnings);
-        }
+        return equipmentContainer.contains(ItemID.RING_OF_WEALTH_1) ||
+                equipmentContainer.contains(ItemID.RING_OF_WEALTH_2) ||
+                equipmentContainer.contains(ItemID.RING_OF_WEALTH_3) ||
+                equipmentContainer.contains(ItemID.RING_OF_WEALTH_4) ||
+                equipmentContainer.contains(ItemID.RING_OF_WEALTH_5) ||
+                equipmentContainer.contains(ItemID.RING_OF_WEALTH_I1) ||
+                equipmentContainer.contains(ItemID.RING_OF_WEALTH_I2) ||
+                equipmentContainer.contains(ItemID.RING_OF_WEALTH_I3) ||
+                equipmentContainer.contains(ItemID.RING_OF_WEALTH_I4) ||
+                equipmentContainer.contains(ItemID.RING_OF_WEALTH_I5);
     }
 
     @Subscribe
@@ -188,22 +171,52 @@ public class CrowdsourcingLootClues {
         disabledClueWarnings = new HashSet<>();
     }
 
-    public void startUp()
+    @Subscribe
+    public void onVarbitChanged(VarbitChanged varbitChanged)
     {
-        if (client.getGameState() != GameState.LOGGED_IN)
+        int varbitId = varbitChanged.getVarbitId();
+        if (VARBITS_CA.containsKey(varbitId))
         {
-            return;
-        }
-
-        // must have turned plugin off and on while logged in. reset state and grab varbits
-        reset();
-        clientThread.invokeLater(() -> {
-            for (Map.Entry<Integer, String> entry : VARBITS_CA.entrySet())
+            String caTier = VARBITS_CA.get(varbitId);
+            int newValue = varbitChanged.getValue();
+            boolean caClaimed = newValue == CA_CLAIMED;
+            if (caClaimed)
             {
+                casClaimed.add(caTier);
+            }
+            else
+            {
+                casClaimed.remove(caTier);
+            }
+//            log.info("(varb change) Combat achievements: " + casClaimed);
+        }
+        if (VARBITS_CLUE_WARNINGS.containsKey(varbitId))
+        {
+            String clueTier = VARBITS_CLUE_WARNINGS.get(varbitId);
+            int newValue = varbitChanged.getValue();
+            boolean warningDisabled = newValue == CLUE_WARNING_DISABLED;
+            if (warningDisabled)
+            {
+                disabledClueWarnings.add(clueTier);
+            }
+            else
+            {
+                disabledClueWarnings.remove(clueTier);
+            }
+//            log.info("(varb change) Clue warnings disabled: " + disabledClueWarnings);
+        }
+    }
+
+    // same as onVarbitChanged, except we're refreshing all of them instead of just one
+    // TODO: probably ought to combine this with onVarbitChanged since it's largely duplicated
+    public void loadVarbitData()
+    {
+        clientThread.invokeLater(() -> {
+            for (Map.Entry<Integer, String> entry : VARBITS_CA.entrySet()) {
                 int varbitId = entry.getKey();
                 String caTier = entry.getValue();
-                int value = client.getVarbitValue(varbitId);
-                boolean caClaimed = value == CA_CLAIMED;
+                int newValue = client.getVarbitValue(varbitId);
+                boolean caClaimed = newValue == CA_CLAIMED;
                 if (caClaimed)
                 {
                     casClaimed.add(caTier);
@@ -213,13 +226,13 @@ public class CrowdsourcingLootClues {
                     casClaimed.remove(caTier);
                 }
             }
+//            log.info("(startup) Combat achievements: " + casClaimed);
 
-            for (Map.Entry<Integer, String> entry : VARBITS_CLUE_WARNINGS.entrySet())
-            {
+            for (Map.Entry<Integer, String> entry : VARBITS_CLUE_WARNINGS.entrySet()) {
                 int varbitId = entry.getKey();
                 String clueTier = entry.getValue();
-                int value = client.getVarbitValue(varbitId);
-                boolean warningDisabled = value == CLUE_WARNING_DISABLED;
+                int newValue = client.getVarbitValue(varbitId);
+                boolean warningDisabled = newValue == CLUE_WARNING_DISABLED;
                 if (warningDisabled)
                 {
                     disabledClueWarnings.add(clueTier);
@@ -229,40 +242,39 @@ public class CrowdsourcingLootClues {
                     disabledClueWarnings.remove(clueTier);
                 }
             }
+//            log.info("(startup) Clue warnings disabled: " + disabledClueWarnings);
         });
     }
 
-    @Subscribe
-    public void onGameStateChanged(GameStateChanged event)
+    public void startUp()
     {
-        if (event.getGameState() == GameState.LOGGED_IN)
+        // get fresh data when plugin gets turned on. if not logged in, onGameStateChanged will handle it
+        if (client.getGameState() == GameState.LOGGED_IN)
         {
             reset();
+            loadVarbitData();
         }
     }
 
-    private boolean hasChargedRingOfWealth()
+    private boolean loggingIn = false;
+    @Subscribe
+    public void onGameStateChanged(GameStateChanged event)
     {
-        ItemContainer equipmentContainer = client.getItemContainer(InventoryID.EQUIPMENT);
-        if (equipmentContainer == null) {
-            return false;
+        GameState gameState = event.getGameState();
+        if (gameState == GameState.LOGGING_IN)
+        {
+            loggingIn = true;
         }
-        return equipmentContainer.contains(ItemID.RING_OF_WEALTH_1) ||
-                equipmentContainer.contains(ItemID.RING_OF_WEALTH_2) ||
-                equipmentContainer.contains(ItemID.RING_OF_WEALTH_3) ||
-                equipmentContainer.contains(ItemID.RING_OF_WEALTH_4) ||
-                equipmentContainer.contains(ItemID.RING_OF_WEALTH_5) ||
-                equipmentContainer.contains(ItemID.RING_OF_WEALTH_I1) ||
-                equipmentContainer.contains(ItemID.RING_OF_WEALTH_I2) ||
-                equipmentContainer.contains(ItemID.RING_OF_WEALTH_I3) ||
-                equipmentContainer.contains(ItemID.RING_OF_WEALTH_I4) ||
-                equipmentContainer.contains(ItemID.RING_OF_WEALTH_I5);
+        else if (loggingIn && gameState == GameState.LOGGED_IN)
+        {
+            reset();
+            loggingIn = false;
+        }
     }
 
     public void addUniversalMetadata()
     {
         pendingLoot.setLocation(client.getLocalPlayer().getWorldLocation());
-
         if (!casClaimed.isEmpty())
         {
             pendingLoot.addMetadata("combatAchievements", casClaimed);
@@ -289,7 +301,7 @@ public class CrowdsourcingLootClues {
         }
 
         addUniversalMetadata();
-        log.info(String.valueOf(pendingLoot));
+//        log.info(String.valueOf(pendingLoot));
         manager.storeEvent(pendingLoot);
         resetLoot();
     }
