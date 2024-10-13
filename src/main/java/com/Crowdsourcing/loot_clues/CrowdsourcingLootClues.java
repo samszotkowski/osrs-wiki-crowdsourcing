@@ -97,7 +97,7 @@ public class CrowdsourcingLootClues {
             {
                 casClaimed = null;
             }
-            log.info("Combat achievements: " + casClaimed);
+//            log.info("Combat achievements: " + casClaimed);
         }
         if (VARBITS_CLUE_WARNINGS.containsKey(varbitId))
         {
@@ -122,7 +122,7 @@ public class CrowdsourcingLootClues {
             {
                 disabledClueWarnings = null;
             }
-            log.info("Clue warnings disabled: " + disabledClueWarnings);
+//            log.info("Clue warnings disabled: " + disabledClueWarnings);
         }
     }
 
@@ -249,8 +249,8 @@ public class CrowdsourcingLootClues {
         }
 
         addUniversalMetadata();
-        log.info(String.valueOf(pendingLoot));
-//        manager.storeEvent(pendingLoot);
+//        log.info(String.valueOf(pendingLoot));
+        manager.storeEvent(pendingLoot);
         pendingLoot = new LootClueData();
         lootReceived = false;
     }
