@@ -57,7 +57,9 @@ public class CrowdsourcingLootClues {
 
     private static final String ROGUE_MESSAGE = "Your rogue clothing allows you to steal twice as much loot!";
 
+    private static final int PICKPOCKET_DELAY = 60;  // a "pickpocket > npc" click can't cause a message 60 ticks later
     private static String pickpocketTarget = null;
+    private static int pickpocketClickTick = -1;
 
     private boolean hasChargedRingOfWealth()
     {
@@ -147,10 +149,19 @@ public class CrowdsourcingLootClues {
             if (npc != null)
             {
                 pickpocketTarget = npc.getName();
-                return;
+                pickpocketClickTick = client.getTickCount();
             }
         }
-        pickpocketTarget = null;
+    }
+
+    @Subscribe
+    public void onGameTick(GameTick event)
+    {
+        if (client.getTickCount() >= pickpocketClickTick + PICKPOCKET_DELAY)
+        {
+            pickpocketTarget = null;
+            pickpocketClickTick = -1;
+        }
     }
 
     @Subscribe
@@ -167,6 +178,11 @@ public class CrowdsourcingLootClues {
         {
             LootClueData pendingData = new LootClueData();
             pendingData.setMessage(message);
+            if (pickpocketTarget != null)
+            {
+                pendingData.addMetadata("lastPickpocketTarget", pickpocketTarget);
+                pendingData.addMetadata("lastPickpocketClickTick", pickpocketClickTick);
+            }
             storeEvent(pendingData);
             return;
         }
@@ -174,21 +190,12 @@ public class CrowdsourcingLootClues {
         {
             LootClueData pendingData = new LootClueData();
             pendingData.setMessage(message);
+            if (pickpocketTarget != null)
+            {
+                pendingData.addMetadata("lastPickpocketTarget", pickpocketTarget);
+                pendingData.addMetadata("lastPickpocketClickTick", pickpocketClickTick);
+            }
             storeEvent(pendingData);
-        }
-    }
-
-    @Subscribe
-    public void onGameTick(GameTick event)
-    {
-        // only store last pickpocket click to happen on this tick
-        if (pickpocketTarget != null)
-        {
-            LootClueData pendingData = new LootClueData();
-            pendingData.setName(pickpocketTarget);
-            pendingData.setType("CLICK_PICKPOCKET");
-            storeEvent(pendingData);
-            pickpocketTarget = null;
         }
     }
 
