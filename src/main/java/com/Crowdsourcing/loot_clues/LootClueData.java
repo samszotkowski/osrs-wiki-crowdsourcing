@@ -17,4 +17,50 @@ public class LootClueData {
     private HashMap<String, Object> metadata;
     private ArrayList<String> messages;
     private ArrayList<HashMap<String, Integer>> drops;
+
+    public LootClueData()
+    {
+        name = null;
+        combatLevel = -1;
+        type = null;
+        location = null;
+        metadata = null;
+        messages = null;
+        drops = null;
+    }
+
+    public void addDrop(String itemName, int quantity)
+    {
+        if (this.drops == null)
+        {
+            this.drops = new ArrayList<>();
+        }
+
+        HashMap<String, Integer> drop = new HashMap<>() {
+            {
+                put(itemName, quantity);
+            }
+        };
+        this.drops.add(drop);
+    }
+
+    public void addMessage(String message)
+    {
+        if (this.messages == null)
+        {
+            this.messages = new ArrayList<>();
+        }
+
+        this.messages.add(message);
+    }
+
+    public void addMetadata(String key, Object value)
+    {
+        if (this.metadata == null)
+        {
+            this.metadata = new HashMap<>();
+        }
+
+        this.metadata.put(key, value);
+    }
 }

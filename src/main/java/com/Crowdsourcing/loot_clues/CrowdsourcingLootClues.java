@@ -2,10 +2,7 @@ package com.Crowdsourcing.loot_clues;
 
 import com.Crowdsourcing.CrowdsourcingManager;
 import javax.inject.Inject;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
@@ -35,126 +32,87 @@ public class CrowdsourcingLootClues {
     @Inject
     ItemManager itemManager;
 
-    private static final List<Integer> VARBITS_CA = new ArrayList<>() {
+    private static final Map<Integer, String> VARBITS_CA = new HashMap<>() {
         {
-            add(12863);  // easy
-            add(12864);  // medium
-            add(12865);  // hard
-            add(12866);  // elite
-            add(12867);  // master
-            add(12868);  // grandmaster
-        }
-    };
-    private static final List<String> CA_TIERS = new ArrayList<>() {
-        {
-            add("EASY");
-            add("MEDIUM");
-            add("HARD");
-            add("ELITE");
-            add("MASTER");
-            add("GRANDMASTER");
+            put(12863, "EASY");
+            put(12864, "MEDIUM");
+            put(12865, "HARD");
+            put(12866, "ELITE");
+            put(12867, "MASTER");
+            put(12868, "GRANDMASTER");
         }
     };
     private static final int CA_CLAIMED = 2;
 
-    private static final List<Integer> VARBITS_CLUE_WARNINGS = new ArrayList<>() {
+    private static final Map<Integer, String> VARBITS_CLUE_WARNINGS = new HashMap<>() {
         {
-            add(10693);  // beginner
-            add(10694);  // easy
-            add(10695);  // medium
-            add(10723);  // hard
-            add(10724);  // elite
-            add(10725);  // master
-        }
-    };
-    private static final List<String> CLUE_TIERS = new ArrayList<>() {
-        {
-            add("BEGINNER");
-            add("EASY");
-            add("MEDIUM");
-            add("HARD");
-            add("ELITE");
-            add("MASTER");
+            put(10693, "BEGINNER");
+            put(10694, "EASY");
+            put(10695, "MEDIUM");
+            put(10723, "HARD");
+            put(10724, "ELITE");
+            put(10725, "MASTER");
         }
     };
     private static final Pattern CLUE_MESSAGE = Pattern.compile("You have a sneaking suspicion.*");
+    private static final int CLUE_WARNING_DISABLED = 1;
 
-    private int highestCaIndexClaimed = -1;
-    private final HashMap<String, Boolean> enabledClueWarnings = new HashMap<>() {
-        {
-            put("BEGINNER", true);
-            put("EASY", true);
-            put("MEDIUM", true);
-            put("HARD", true);
-            put("ELITE", true);
-            put("MASTER", true);
-        }
-    };
+    // metadata
+    private final Set<String> casClaimed = new HashSet<>();
+    private final Set<String> disabledClueWarnings = new HashSet<>();
 
-    private LootClueData pendingLoot = null;
-    private ArrayList<String> pendingMessages = new ArrayList<>();
-    private String prevLooted = "";
+    private String pickpocketTarget = null;
+
+    private LootClueData pendingLoot = new LootClueData();
+    private boolean lootReceived = false;
 
     @Subscribe
     public void onVarbitChanged(VarbitChanged varbitChanged)
     {
         int varbitId = varbitChanged.getVarbitId();
-        if (VARBITS_CA.contains(varbitId))
+        if (VARBITS_CA.containsKey(varbitId))
         {
-            int index = VARBITS_CA.indexOf(varbitId);
+            String caTier = VARBITS_CA.get(varbitId);
             int newValue = varbitChanged.getValue();
-            if (newValue == CA_CLAIMED && index > highestCaIndexClaimed)
+            boolean caClaimed = newValue == CA_CLAIMED;
+            if (caClaimed)
             {
-                highestCaIndexClaimed = index;
-//                log.info("Highest CA: " + CA_TIERS.get(highestCaIndexClaimed));
+                casClaimed.add(caTier);
             }
+            else
+            {
+                casClaimed.remove(caTier);
+            }
+            log.info("Combat achievements: " + casClaimed);
         }
-        if (VARBITS_CLUE_WARNINGS.contains(varbitId))
+        if (VARBITS_CLUE_WARNINGS.containsKey(varbitId))
         {
-            int index = VARBITS_CLUE_WARNINGS.indexOf(varbitId);
-            String clueTier = CLUE_TIERS.get(index);
+            String clueTier = VARBITS_CLUE_WARNINGS.get(varbitId);
             int newValue = varbitChanged.getValue();
-            Boolean warningEnabled = newValue == 0;
-            enabledClueWarnings.put(clueTier, warningEnabled);
-//            log.info("Clue warnings enabled: " + enabledClueWarnings);
+            boolean warningDisabled = newValue == CLUE_WARNING_DISABLED;
+            if (warningDisabled)
+            {
+                disabledClueWarnings.add(clueTier);
+            }
+            else
+            {
+                disabledClueWarnings.remove(clueTier);
+            }
+            log.info("Clue warnings disabled: " + disabledClueWarnings);
         }
-    }
-
-    private boolean hasChargedRingOfWealth()
-    {
-        ItemContainer equipmentContainer = client.getItemContainer(InventoryID.EQUIPMENT);
-        if (equipmentContainer == null) {
-            return false;
-        }
-        return equipmentContainer.contains(ItemID.RING_OF_WEALTH_1) ||
-            equipmentContainer.contains(ItemID.RING_OF_WEALTH_2) ||
-            equipmentContainer.contains(ItemID.RING_OF_WEALTH_3) ||
-            equipmentContainer.contains(ItemID.RING_OF_WEALTH_4) ||
-            equipmentContainer.contains(ItemID.RING_OF_WEALTH_5) ||
-            equipmentContainer.contains(ItemID.RING_OF_WEALTH_I1) ||
-            equipmentContainer.contains(ItemID.RING_OF_WEALTH_I2) ||
-            equipmentContainer.contains(ItemID.RING_OF_WEALTH_I3) ||
-            equipmentContainer.contains(ItemID.RING_OF_WEALTH_I4) ||
-            equipmentContainer.contains(ItemID.RING_OF_WEALTH_I5);
-    }
-
-    public HashMap<String, Object> createMetadata()
-    {
-        HashMap<String, Object> metadata = new HashMap<>();
-        metadata.put("highestCombatAchievement", CA_TIERS.get(highestCaIndexClaimed));
-        metadata.put("clueWarningsEnabled", enabledClueWarnings);
-        metadata.put("hasRingOfWealth", hasChargedRingOfWealth());
-        return metadata;
     }
 
     @Subscribe
     public void onLootReceived(LootReceived event)
     {
         String name = event.getName();
-        prevLooted = name;
-
         int combatLevel = event.getCombatLevel();
         LootRecordType type = event.getType();
+
+        if (type == LootRecordType.NPC || name.toUpperCase().startsWith("TZHAAR"))
+        {
+            pendingLoot.addMetadata("hasRingOfWealth", hasChargedRingOfWealth());
+        }
 
         ArrayList<HashMap<String, Integer>> drops = new ArrayList<>();
         Collection<ItemStack> items = event.getItems();
@@ -163,21 +121,18 @@ public class CrowdsourcingLootClues {
             int itemId = item.getId();
             String itemName = itemManager.getItemComposition(itemId).getName();
             int quantity = item.getQuantity();
-            HashMap<String, Integer> drop = new HashMap<>() {
-                {
-                    put(itemName, quantity);
-                }
-            };
-            drops.add(drop);
+            pendingLoot.addDrop(itemName, quantity);
         }
 
-        pendingLoot = new LootClueData(name, combatLevel, type, null, null, null, drops);
+        pendingLoot.setName(name);
+        pendingLoot.setCombatLevel(combatLevel);
+        pendingLoot.setType(type);
+        lootReceived = true;
     }
 
     @Subscribe
     public void onChatMessage(ChatMessage event)
     {
-
         if (event.getType() != ChatMessageType.GAMEMESSAGE)
         {
             return;
@@ -186,7 +141,8 @@ public class CrowdsourcingLootClues {
         String message = event.getMessage();
         if (CLUE_MESSAGE.matcher(message).matches())
         {
-            pendingMessages.add(message);
+            pendingLoot.addMessage(message);
+            lootReceived = true;
         }
     }
 
@@ -198,35 +154,57 @@ public class CrowdsourcingLootClues {
             NPC npc = event.getMenuEntry().getNpc();
             if (npc != null)
             {
-                prevLooted = npc.getName();
+                pickpocketTarget = npc.getName();
+                return;
             }
         }
+        pickpocketTarget = null;
+    }
+
+    private boolean hasChargedRingOfWealth()
+    {
+        ItemContainer equipmentContainer = client.getItemContainer(InventoryID.EQUIPMENT);
+        if (equipmentContainer == null) {
+            return false;
+        }
+        return equipmentContainer.contains(ItemID.RING_OF_WEALTH_1) ||
+                equipmentContainer.contains(ItemID.RING_OF_WEALTH_2) ||
+                equipmentContainer.contains(ItemID.RING_OF_WEALTH_3) ||
+                equipmentContainer.contains(ItemID.RING_OF_WEALTH_4) ||
+                equipmentContainer.contains(ItemID.RING_OF_WEALTH_5) ||
+                equipmentContainer.contains(ItemID.RING_OF_WEALTH_I1) ||
+                equipmentContainer.contains(ItemID.RING_OF_WEALTH_I2) ||
+                equipmentContainer.contains(ItemID.RING_OF_WEALTH_I3) ||
+                equipmentContainer.contains(ItemID.RING_OF_WEALTH_I4) ||
+                equipmentContainer.contains(ItemID.RING_OF_WEALTH_I5);
+    }
+
+    public void addUniversalMetadata()
+    {
+        pendingLoot.setLocation(client.getLocalPlayer().getWorldLocation());
+        pendingLoot.addMetadata("combatAchievements", casClaimed);
+        pendingLoot.addMetadata("clueWarningsDisabled", disabledClueWarnings);
     }
 
     @Subscribe
     public void onGameTick(GameTick event)
     {
-        if (pendingLoot == null && pendingMessages.isEmpty())
+        if (!lootReceived)
         {
             return;
         }
-        if (pendingLoot != null && !pendingMessages.isEmpty())
+
+        if (pickpocketTarget != null)
         {
-            pendingLoot.setMessages(pendingMessages);
-        }
-        if (pendingLoot == null)
-        {
-            pendingLoot = new LootClueData(
-                prevLooted, -1, LootRecordType.PICKPOCKET, null, null, pendingMessages, null
-            );
+            pendingLoot.setName(pickpocketTarget);
+            pendingLoot.setCombatLevel(-1);
+            pendingLoot.setType(LootRecordType.PICKPOCKET);
         }
 
-        pendingLoot.setLocation(client.getLocalPlayer().getWorldLocation());
-        pendingLoot.setMetadata(createMetadata());
-
-//        log.info(String.valueOf(pendingLoot));
-        manager.storeEvent(pendingLoot);
-        pendingLoot = null;
-        pendingMessages = new ArrayList<>();
+        addUniversalMetadata();
+        log.info(String.valueOf(pendingLoot));
+//        manager.storeEvent(pendingLoot);
+        pendingLoot = new LootClueData();
+        lootReceived = false;
     }
 }
