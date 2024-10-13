@@ -17,6 +17,7 @@ import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.VarbitChanged;
+import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.ItemStack;
@@ -27,6 +28,9 @@ import net.runelite.http.api.loottracker.LootRecordType;
 public class CrowdsourcingLootClues {
     @Inject
     Client client;
+
+    @Inject
+    ClientThread clientThread;
 
     @Inject
     CrowdsourcingManager manager;
@@ -76,11 +80,6 @@ public class CrowdsourcingLootClues {
         int varbitId = varbitChanged.getVarbitId();
         if (VARBITS_CA.containsKey(varbitId))
         {
-            if (casClaimed == null)
-            {
-                casClaimed = new HashSet<>();
-            }
-
             String caTier = VARBITS_CA.get(varbitId);
             int newValue = varbitChanged.getValue();
             boolean caClaimed = newValue == CA_CLAIMED;
@@ -92,20 +91,10 @@ public class CrowdsourcingLootClues {
             {
                 casClaimed.remove(caTier);
             }
-
-            if (casClaimed.isEmpty())
-            {
-                casClaimed = null;
-            }
 //            log.info("Combat achievements: " + casClaimed);
         }
         if (VARBITS_CLUE_WARNINGS.containsKey(varbitId))
         {
-            if (disabledClueWarnings == null)
-            {
-                disabledClueWarnings = new HashSet<>();
-            }
-
             String clueTier = VARBITS_CLUE_WARNINGS.get(varbitId);
             int newValue = varbitChanged.getValue();
             boolean warningDisabled = newValue == CLUE_WARNING_DISABLED;
@@ -116,11 +105,6 @@ public class CrowdsourcingLootClues {
             else
             {
                 disabledClueWarnings.remove(clueTier);
-            }
-
-            if (disabledClueWarnings.isEmpty())
-            {
-                disabledClueWarnings = null;
             }
 //            log.info("Clue warnings disabled: " + disabledClueWarnings);
         }
@@ -190,13 +174,62 @@ public class CrowdsourcingLootClues {
         pickpocketTarget = null;
     }
 
-    private void reset()
+    private void resetLoot()
     {
-        pickpocketTarget = null;
         pendingLoot = new LootClueData();
         lootReceived = false;
-        casClaimed = null;
-        disabledClueWarnings = null;
+    }
+
+    private void reset()
+    {
+        resetLoot();
+        pickpocketTarget = null;
+        casClaimed = new HashSet<>();
+        disabledClueWarnings = new HashSet<>();
+    }
+
+    public void startUp()
+    {
+        if (client.getGameState() != GameState.LOGGED_IN)
+        {
+            return;
+        }
+
+        // must have turned plugin off and on while logged in. reset state and grab varbits
+        reset();
+        clientThread.invokeLater(() -> {
+            for (Map.Entry<Integer, String> entry : VARBITS_CA.entrySet())
+            {
+                int varbitId = entry.getKey();
+                String caTier = entry.getValue();
+                int value = client.getVarbitValue(varbitId);
+                boolean caClaimed = value == CA_CLAIMED;
+                if (caClaimed)
+                {
+                    casClaimed.add(caTier);
+                }
+                else
+                {
+                    casClaimed.remove(caTier);
+                }
+            }
+
+            for (Map.Entry<Integer, String> entry : VARBITS_CLUE_WARNINGS.entrySet())
+            {
+                int varbitId = entry.getKey();
+                String clueTier = entry.getValue();
+                int value = client.getVarbitValue(varbitId);
+                boolean warningDisabled = value == CLUE_WARNING_DISABLED;
+                if (warningDisabled)
+                {
+                    disabledClueWarnings.add(clueTier);
+                }
+                else
+                {
+                    disabledClueWarnings.remove(clueTier);
+                }
+            }
+        });
     }
 
     @Subscribe
@@ -229,8 +262,15 @@ public class CrowdsourcingLootClues {
     public void addUniversalMetadata()
     {
         pendingLoot.setLocation(client.getLocalPlayer().getWorldLocation());
-        pendingLoot.addMetadata("combatAchievements", casClaimed);
-        pendingLoot.addMetadata("clueWarningsDisabled", disabledClueWarnings);
+
+        if (!casClaimed.isEmpty())
+        {
+            pendingLoot.addMetadata("combatAchievements", casClaimed);
+        }
+        if (!disabledClueWarnings.isEmpty())
+        {
+            pendingLoot.addMetadata("clueWarningsDisabled", disabledClueWarnings);
+        }
     }
 
     @Subscribe
@@ -249,9 +289,8 @@ public class CrowdsourcingLootClues {
         }
 
         addUniversalMetadata();
-//        log.info(String.valueOf(pendingLoot));
+        log.info(String.valueOf(pendingLoot));
         manager.storeEvent(pendingLoot);
-        pendingLoot = new LootClueData();
-        lootReceived = false;
+        resetLoot();
     }
 }
