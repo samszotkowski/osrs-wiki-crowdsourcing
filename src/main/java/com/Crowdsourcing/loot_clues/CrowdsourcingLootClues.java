@@ -129,10 +129,10 @@ public class CrowdsourcingLootClues {
 
     private void addUniversalMetadata(LootClueData data)
     {
-        addCasClaimedMetadata(data);
-        addClueWarningSettingsMetadata(data);
         data.setTick(client.getTickCount());
         data.setLocation(client.getLocalPlayer().getWorldLocation());
+        addCasClaimedMetadata(data);
+        addClueWarningSettingsMetadata(data);
     }
 
     @Subscribe
