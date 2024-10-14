@@ -2,10 +2,8 @@ package com.Crowdsourcing.loot_clues;
 
 import com.Crowdsourcing.CrowdsourcingManager;
 import javax.inject.Inject;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
@@ -72,25 +70,26 @@ public class CrowdsourcingLootClues {
     private static final String HUNTERS_LOOT_SACK_EXPERT = "Hunters' loot sack (expert)";
     private static final String HUNTERS_LOOT_SACK_MASTER = "Hunters' loot sack (master)";
 
-    private boolean hasChargedRingOfWealth()
+    private void addRingOfWealthMetadata(LootClueData data)
     {
         ItemContainer equipmentContainer = client.getItemContainer(InventoryID.EQUIPMENT);
         if (equipmentContainer == null) {
-            return false;
+            return;
         }
-        return equipmentContainer.contains(ItemID.RING_OF_WEALTH_1) ||
-                equipmentContainer.contains(ItemID.RING_OF_WEALTH_2) ||
-                equipmentContainer.contains(ItemID.RING_OF_WEALTH_3) ||
-                equipmentContainer.contains(ItemID.RING_OF_WEALTH_4) ||
-                equipmentContainer.contains(ItemID.RING_OF_WEALTH_5) ||
-                equipmentContainer.contains(ItemID.RING_OF_WEALTH_I1) ||
-                equipmentContainer.contains(ItemID.RING_OF_WEALTH_I2) ||
-                equipmentContainer.contains(ItemID.RING_OF_WEALTH_I3) ||
-                equipmentContainer.contains(ItemID.RING_OF_WEALTH_I4) ||
-                equipmentContainer.contains(ItemID.RING_OF_WEALTH_I5);
+        boolean hasChargedRing = equipmentContainer.contains(ItemID.RING_OF_WEALTH_1) ||
+            equipmentContainer.contains(ItemID.RING_OF_WEALTH_2) ||
+            equipmentContainer.contains(ItemID.RING_OF_WEALTH_3) ||
+            equipmentContainer.contains(ItemID.RING_OF_WEALTH_4) ||
+            equipmentContainer.contains(ItemID.RING_OF_WEALTH_5) ||
+            equipmentContainer.contains(ItemID.RING_OF_WEALTH_I1) ||
+            equipmentContainer.contains(ItemID.RING_OF_WEALTH_I2) ||
+            equipmentContainer.contains(ItemID.RING_OF_WEALTH_I3) ||
+            equipmentContainer.contains(ItemID.RING_OF_WEALTH_I4) ||
+            equipmentContainer.contains(ItemID.RING_OF_WEALTH_I5);
+        data.addMetadata("hasChargedRingOfWealth", hasChargedRing);
     }
 
-    private void addCasClaimed(LootClueData data)
+    private void addCasClaimedMetadata(LootClueData data)
     {
         clientThread.invoke(() -> {
             for (Map.Entry<Integer, String> entry : VARBITS_CA.entrySet())
@@ -104,7 +103,7 @@ public class CrowdsourcingLootClues {
         });
     }
 
-    private void addClueWarningSettings(LootClueData data)
+    private void addClueWarningSettingsMetadata(LootClueData data)
     {
         clientThread.invoke(() -> {
             for (Map.Entry<Integer, String> entry : VARBITS_CLUE_WARNINGS.entrySet())
@@ -130,8 +129,8 @@ public class CrowdsourcingLootClues {
 
     private void addUniversalMetadata(LootClueData data)
     {
-        addCasClaimed(data);
-        addClueWarningSettings(data);
+        addCasClaimedMetadata(data);
+        addClueWarningSettingsMetadata(data);
         data.setTick(client.getTickCount());
         data.setLocation(client.getLocalPlayer().getWorldLocation());
     }
@@ -159,7 +158,7 @@ public class CrowdsourcingLootClues {
 
         if (eventType == LootRecordType.NPC || name.toUpperCase().startsWith("TZHAAR"))
         {
-            pendingLoot.addMetadata("hasRingOfWealth", hasChargedRingOfWealth());
+            addRingOfWealthMetadata(pendingLoot);
         }
 
         switch (name)
