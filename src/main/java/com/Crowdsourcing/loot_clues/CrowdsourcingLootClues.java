@@ -216,19 +216,7 @@ public class CrowdsourcingLootClues {
         }
 
         String message = event.getMessage();
-        if (CLUE_MESSAGE.matcher(message).matches())
-        {
-            LootClueData pendingData = new LootClueData();
-            pendingData.setMessage(message);
-            if (pickpocketTarget != null)
-            {
-                pendingData.addMetadata("lastPickpocketTarget", pickpocketTarget);
-                pendingData.addMetadata("lastPickpocketClickTick", pickpocketClickTick);
-            }
-            storeEvent(pendingData);
-            return;
-        }
-        if (ROGUE_MESSAGE.equals(message))
+        if (CLUE_MESSAGE.matcher(message).matches() || ROGUE_MESSAGE.equals(message))
         {
             LootClueData pendingData = new LootClueData();
             pendingData.setMessage(message);
