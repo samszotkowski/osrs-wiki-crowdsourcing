@@ -15,6 +15,7 @@ import net.runelite.api.InventoryID;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.ItemID;
 import net.runelite.api.NPC;
+import net.runelite.api.Skill;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.MenuOptionClicked;
@@ -65,6 +66,11 @@ public class CrowdsourcingLootClues {
     private static final int PICKPOCKET_DELAY = 60;  // a "pickpocket > npc" click can't cause a message 60 ticks later
     private static String pickpocketTarget = null;
     private static int pickpocketClickTick = -1;
+
+    private static final String HUNTERS_LOOT_SACK_BASIC = "Hunters' loot sack (basic)";
+    private static final String HUNTERS_LOOT_SACK_ADEPT = "Hunters' loot sack (adept)";
+    private static final String HUNTERS_LOOT_SACK_EXPERT = "Hunters' loot sack (expert)";
+    private static final String HUNTERS_LOOT_SACK_MASTER = "Hunters' loot sack (master)";
 
     private boolean hasChargedRingOfWealth()
     {
@@ -120,14 +126,23 @@ public class CrowdsourcingLootClues {
         return disabledClueWarnings;
     }
 
+    public int getSkillLevel(Skill s, boolean boosted)
+    {
+        return boosted ? client.getBoostedSkillLevel(s) : client.getRealSkillLevel(s);
+    }
+
     @Subscribe
     public void onLootReceived(LootReceived event)
     {
         LootClueData pendingLoot = new LootClueData();
 
-        pendingLoot.setName(event.getName());
-        pendingLoot.setCombatLevel(event.getCombatLevel());
-        pendingLoot.setType(event.getType().name());
+        String name = event.getName();
+        int level = event.getCombatLevel();
+        LootRecordType eventType = event.getType();
+
+        pendingLoot.setName(name);
+        pendingLoot.setCombatLevel(level);
+        pendingLoot.setType(eventType);
 
         Collection<ItemStack> items = event.getItems();
         for (ItemStack item: items)
@@ -137,9 +152,21 @@ public class CrowdsourcingLootClues {
             pendingLoot.addDrop(itemId, quantity);
         }
 
-        if (event.getType() == LootRecordType.NPC || event.getName().toUpperCase().startsWith("TZHAAR"))
+        if (eventType == LootRecordType.NPC || name.toUpperCase().startsWith("TZHAAR"))
         {
             pendingLoot.addMetadata("hasRingOfWealth", hasChargedRingOfWealth());
+        }
+
+        switch (name)
+        {
+            case HUNTERS_LOOT_SACK_BASIC:
+            case HUNTERS_LOOT_SACK_ADEPT:
+            case HUNTERS_LOOT_SACK_EXPERT:
+            case HUNTERS_LOOT_SACK_MASTER:
+                Skill herb = Skill.HERBLORE;
+                Skill wc = Skill.WOODCUTTING;
+                pendingLoot.addMetadata("B" + herb.getName(), getSkillLevel(herb, true));
+                pendingLoot.addMetadata("B" + wc.getName(), getSkillLevel(wc, true));
         }
 
         storeEvent(pendingLoot);

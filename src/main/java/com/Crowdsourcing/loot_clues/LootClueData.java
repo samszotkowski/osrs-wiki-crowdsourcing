@@ -12,7 +12,7 @@ import net.runelite.http.api.loottracker.LootRecordType;
 public class LootClueData {
     private String name;
     private int combatLevel;
-    private String type;
+    private LootRecordType type;
     private ArrayList<HashMap<String, Integer>> drops;
     private String message;
     private WorldPoint location;
