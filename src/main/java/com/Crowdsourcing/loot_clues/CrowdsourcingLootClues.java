@@ -38,24 +38,24 @@ public class CrowdsourcingLootClues {
 
     private static final Map<Integer, String> VARBITS_CA = new HashMap<>() {
         {
-            put(12863, "EASY");
-            put(12864, "MEDIUM");
-            put(12865, "HARD");
-            put(12866, "ELITE");
-            put(12867, "MASTER");
-            put(12868, "GRANDMASTER");
+            put(12863, "EASY_CA");
+            put(12864, "MEDIUM_CA");
+            put(12865, "HARD_CA");
+            put(12866, "ELITE_CA");
+            put(12867, "MASTER_CA");
+            put(12868, "GRANDMASTER_CA");
         }
     };
     private static final int CA_CLAIMED = 2;
 
     private static final Map<Integer, String> VARBITS_CLUE_WARNINGS = new HashMap<>() {
         {
-            put(10693, "BEGINNER");
-            put(10694, "EASY");
-            put(10695, "MEDIUM");
-            put(10723, "HARD");
-            put(10724, "ELITE");
-            put(10725, "MASTER");
+            put(10693, "BEGINNER_CLUE_DISABLED");
+            put(10694, "EASY_CLUE_DISABLED");
+            put(10695, "MEDIUM_CLUE_DISABLED");
+            put(10723, "HARD_CLUE_DISABLED");
+            put(10724, "ELITE_CLUE_DISABLED");
+            put(10725, "MASTER_CLUE_DISABLED");
         }
     };
     private static final Pattern CLUE_MESSAGE = Pattern.compile("You have a sneaking suspicion.*");
@@ -64,8 +64,8 @@ public class CrowdsourcingLootClues {
     private static final String ROGUE_MESSAGE = "Your rogue clothing allows you to steal twice as much loot!";
 
     private static final int PICKPOCKET_DELAY = 60;  // a "pickpocket > npc" click can't cause a message 60 ticks later
-    private static String pickpocketTarget = null;
-    private static int pickpocketClickTick = -1;
+    private String pickpocketTarget = null;
+    private int pickpocketClickTick = -1;
 
     private static final String HUNTERS_LOOT_SACK_BASIC = "Hunters' loot sack (basic)";
     private static final String HUNTERS_LOOT_SACK_ADEPT = "Hunters' loot sack (adept)";
@@ -90,9 +90,8 @@ public class CrowdsourcingLootClues {
                 equipmentContainer.contains(ItemID.RING_OF_WEALTH_I5);
     }
 
-    private List<String> getCasClaimed()
+    private void addCasClaimed(LootClueData data)
     {
-        List<String> casClaimed = new ArrayList<>();
         clientThread.invoke(() -> {
             for (Map.Entry<Integer, String> entry : VARBITS_CA.entrySet())
             {
@@ -100,17 +99,13 @@ public class CrowdsourcingLootClues {
                 String caTier = entry.getValue();
                 int value = client.getVarbitValue(varbitId);
                 boolean caClaimed = value == CA_CLAIMED;
-                if (caClaimed) {
-                    casClaimed.add(caTier);
-                }
+                data.addMetadata(caTier, caClaimed);
             }
         });
-        return casClaimed;
     }
 
-    private List<String> getClueWarningSettings()
+    private void addClueWarningSettings(LootClueData data)
     {
-        List<String> disabledClueWarnings = new ArrayList<>();
         clientThread.invoke(() -> {
             for (Map.Entry<Integer, String> entry : VARBITS_CLUE_WARNINGS.entrySet())
             {
@@ -118,12 +113,9 @@ public class CrowdsourcingLootClues {
                 String clueTier = entry.getValue();
                 int value = client.getVarbitValue(varbitId);
                 boolean warningDisabled = value == CLUE_WARNING_DISABLED;
-                if (warningDisabled) {
-                    disabledClueWarnings.add(clueTier);
-                }
+                data.addMetadata(clueTier, warningDisabled);
             }
         });
-        return disabledClueWarnings;
     }
 
     private void addSkillMetadata(Skill s, LootClueData data)
@@ -134,6 +126,14 @@ public class CrowdsourcingLootClues {
         int boostedLevel = client.getBoostedSkillLevel(s);
         data.addMetadata(name, level);
         data.addMetadata(boostedName, boostedLevel);
+    }
+
+    private void addUniversalMetadata(LootClueData data)
+    {
+        addCasClaimed(data);
+        addClueWarningSettings(data);
+        data.setTick(client.getTickCount());
+        data.setLocation(client.getLocalPlayer().getWorldLocation());
     }
 
     @Subscribe
@@ -229,15 +229,7 @@ public class CrowdsourcingLootClues {
         }
     }
 
-    public void addUniversalMetadata(LootClueData data)
-    {
-        data.setTick(client.getTickCount());
-        data.setLocation(client.getLocalPlayer().getWorldLocation());
-        data.addMetadata("combatAchievements", getCasClaimed());
-        data.addMetadata("clueWarningsDisabled", getClueWarningSettings());
-    }
-
-    public void storeEvent(LootClueData data)
+    private void storeEvent(LootClueData data)
     {
         addUniversalMetadata(data);
 //        log.info(String.valueOf(data));
