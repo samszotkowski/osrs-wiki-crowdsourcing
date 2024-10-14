@@ -126,9 +126,14 @@ public class CrowdsourcingLootClues {
         return disabledClueWarnings;
     }
 
-    public int getSkillLevel(Skill s, boolean boosted)
+    private void addSkillMetadata(Skill s, LootClueData data)
     {
-        return boosted ? client.getBoostedSkillLevel(s) : client.getRealSkillLevel(s);
+        String name = s.getName();
+        String boostedName = "B" + name;
+        int level = client.getRealSkillLevel(s);
+        int boostedLevel = client.getBoostedSkillLevel(s);
+        data.addMetadata(name, level);
+        data.addMetadata(boostedName, boostedLevel);
     }
 
     @Subscribe
@@ -163,10 +168,8 @@ public class CrowdsourcingLootClues {
             case HUNTERS_LOOT_SACK_ADEPT:
             case HUNTERS_LOOT_SACK_EXPERT:
             case HUNTERS_LOOT_SACK_MASTER:
-                Skill herb = Skill.HERBLORE;
-                Skill wc = Skill.WOODCUTTING;
-                pendingLoot.addMetadata("B" + herb.getName(), getSkillLevel(herb, true));
-                pendingLoot.addMetadata("B" + wc.getName(), getSkillLevel(wc, true));
+                addSkillMetadata(Skill.HERBLORE, pendingLoot);
+                addSkillMetadata(Skill.WOODCUTTING, pendingLoot);
         }
 
         storeEvent(pendingLoot);
