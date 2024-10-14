@@ -167,7 +167,9 @@ public class CrowdsourcingLootClues {
             return;
         }
 
-        if (client.getTickCount() >= pickpocketClickTick + PICKPOCKET_DELAY)
+        // forget pickpocket target after 60 ticks and after hopping worlds
+        int tick = client.getTickCount();
+        if (tick == 0 || tick >= pickpocketClickTick + PICKPOCKET_DELAY)
         {
             pickpocketTarget = null;
             pickpocketClickTick = -1;
