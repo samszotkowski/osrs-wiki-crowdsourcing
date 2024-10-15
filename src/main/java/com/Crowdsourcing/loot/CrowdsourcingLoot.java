@@ -52,6 +52,8 @@ public class CrowdsourcingLoot {
 	private static final Pattern CLUE_MESSAGE = Pattern.compile("You have a sneaking suspicion.*");
 	private static final int CLUE_WARNING_DISABLED = 1;
 
+	private static final String ROGUE_MESSAGE = "Your rogue clothing allows you to steal twice as much loot!";
+
 	private void addCasClaimedMetadata(LootData data)
 	{
 		clientThread.invoke(() -> {
@@ -122,7 +124,7 @@ public class CrowdsourcingLoot {
 		}
 
 		String message = event.getMessage();
-		if (CLUE_MESSAGE.matcher(message).matches())
+		if (CLUE_MESSAGE.matcher(message).matches() || ROGUE_MESSAGE.equals(message))
 		{
 			LootData pendingData = new LootData();
 			pendingData.setMessage(message);
