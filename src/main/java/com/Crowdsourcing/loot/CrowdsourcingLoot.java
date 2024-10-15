@@ -12,8 +12,11 @@ import net.runelite.api.Client;
 import net.runelite.api.InventoryID;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.ItemID;
+import net.runelite.api.NPC;
 import net.runelite.api.Skill;
 import net.runelite.api.events.ChatMessage;
+import net.runelite.api.events.GameTick;
+import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.game.ItemStack;
@@ -62,6 +65,10 @@ public class CrowdsourcingLoot {
 	private static final String HUNTERS_LOOT_SACK_ADEPT = "Hunters' loot sack (adept)";
 	private static final String HUNTERS_LOOT_SACK_EXPERT = "Hunters' loot sack (expert)";
 	private static final String HUNTERS_LOOT_SACK_MASTER = "Hunters' loot sack (master)";
+
+	private static final int PICKPOCKET_DELAY = 60;  // a "pickpocket > npc" click can't cause a message 60 ticks later
+	private String pickpocketTarget = null;
+	private int pickpocketClickTick = -1;
 
 	private void addRingOfWealthMetadata(LootData data)
 	{
@@ -168,6 +175,37 @@ public class CrowdsourcingLoot {
 	}
 
 	@Subscribe
+	public void onMenuOptionClicked(MenuOptionClicked event)
+	{
+		if (event.getMenuOption().equals("Pickpocket"))
+		{
+			NPC npc = event.getMenuEntry().getNpc();
+			if (npc != null)
+			{
+				pickpocketTarget = npc.getName();
+				pickpocketClickTick = client.getTickCount();
+			}
+		}
+	}
+
+	@Subscribe
+	public void onGameTick(GameTick event)
+	{
+		if (pickpocketClickTick == -1)
+		{
+			return;
+		}
+
+		// forget pickpocket target after 60 ticks and after hopping worlds
+		int tick = client.getTickCount();
+		if (tick == 0 || tick >= pickpocketClickTick + PICKPOCKET_DELAY)
+		{
+			pickpocketTarget = null;
+			pickpocketClickTick = -1;
+		}
+	}
+
+	@Subscribe
 	public void onChatMessage(ChatMessage event)
 	{
 		ChatMessageType messageType = event.getType();
@@ -181,6 +219,11 @@ public class CrowdsourcingLoot {
 		{
 			LootData pendingData = new LootData();
 			pendingData.setMessage(message);
+			if (pickpocketTarget != null)
+			{
+				pendingData.addMetadata("lastPickpocketTarget", pickpocketTarget);
+				pendingData.addMetadata("lastPickpocketClickTick", pickpocketClickTick);
+			}
 			storeEvent(pendingData);
 		}
 	}
