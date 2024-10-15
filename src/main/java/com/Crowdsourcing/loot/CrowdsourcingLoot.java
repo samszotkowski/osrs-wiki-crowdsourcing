@@ -9,6 +9,9 @@ import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
+import net.runelite.api.InventoryID;
+import net.runelite.api.ItemContainer;
+import net.runelite.api.ItemID;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.Subscribe;
@@ -53,6 +56,25 @@ public class CrowdsourcingLoot {
 	private static final int CLUE_WARNING_DISABLED = 1;
 
 	private static final String ROGUE_MESSAGE = "Your rogue clothing allows you to steal twice as much loot!";
+
+	private void addRingOfWealthMetadata(LootData data)
+	{
+		ItemContainer equipmentContainer = client.getItemContainer(InventoryID.EQUIPMENT);
+		if (equipmentContainer == null) {
+			return;
+		}
+		boolean hasChargedRing = equipmentContainer.contains(ItemID.RING_OF_WEALTH_1) ||
+			equipmentContainer.contains(ItemID.RING_OF_WEALTH_2) ||
+			equipmentContainer.contains(ItemID.RING_OF_WEALTH_3) ||
+			equipmentContainer.contains(ItemID.RING_OF_WEALTH_4) ||
+			equipmentContainer.contains(ItemID.RING_OF_WEALTH_5) ||
+			equipmentContainer.contains(ItemID.RING_OF_WEALTH_I1) ||
+			equipmentContainer.contains(ItemID.RING_OF_WEALTH_I2) ||
+			equipmentContainer.contains(ItemID.RING_OF_WEALTH_I3) ||
+			equipmentContainer.contains(ItemID.RING_OF_WEALTH_I4) ||
+			equipmentContainer.contains(ItemID.RING_OF_WEALTH_I5);
+		data.addMetadata("hasChargedRingOfWealth", hasChargedRing);
+	}
 
 	private void addCasClaimedMetadata(LootData data)
 	{
@@ -109,6 +131,11 @@ public class CrowdsourcingLoot {
 			int itemId = item.getId();
 			int quantity = item.getQuantity();
 			pendingLoot.addDrop(itemId, quantity);
+		}
+
+		if (eventType == LootRecordType.NPC || name.toUpperCase().startsWith("TZHAAR"))
+		{
+			addRingOfWealthMetadata(pendingLoot);
 		}
 
 		storeEvent(pendingLoot);
