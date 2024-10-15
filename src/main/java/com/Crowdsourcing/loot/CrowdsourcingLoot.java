@@ -12,6 +12,7 @@ import net.runelite.api.Client;
 import net.runelite.api.InventoryID;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.ItemID;
+import net.runelite.api.Skill;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.Subscribe;
@@ -56,6 +57,11 @@ public class CrowdsourcingLoot {
 	private static final int CLUE_WARNING_DISABLED = 1;
 
 	private static final String ROGUE_MESSAGE = "Your rogue clothing allows you to steal twice as much loot!";
+
+	private static final String HUNTERS_LOOT_SACK_BASIC = "Hunters' loot sack (basic)";
+	private static final String HUNTERS_LOOT_SACK_ADEPT = "Hunters' loot sack (adept)";
+	private static final String HUNTERS_LOOT_SACK_EXPERT = "Hunters' loot sack (expert)";
+	private static final String HUNTERS_LOOT_SACK_MASTER = "Hunters' loot sack (master)";
 
 	private void addRingOfWealthMetadata(LootData data)
 	{
@@ -104,6 +110,16 @@ public class CrowdsourcingLoot {
 		});
 	}
 
+	private void addSkillMetadata(Skill s, LootData data)
+	{
+		String name = s.getName();
+		String boostedName = "B" + name;
+		int level = client.getRealSkillLevel(s);
+		int boostedLevel = client.getBoostedSkillLevel(s);
+		data.addMetadata(name, level);
+		data.addMetadata(boostedName, boostedLevel);
+	}
+
 	private void addUniversalMetadata(LootData data)
 	{
 		data.setTick(client.getTickCount());
@@ -136,6 +152,16 @@ public class CrowdsourcingLoot {
 		if (eventType == LootRecordType.NPC || name.toUpperCase().startsWith("TZHAAR"))
 		{
 			addRingOfWealthMetadata(pendingLoot);
+		}
+
+		switch (name)
+		{
+			case HUNTERS_LOOT_SACK_BASIC:
+			case HUNTERS_LOOT_SACK_ADEPT:
+			case HUNTERS_LOOT_SACK_EXPERT:
+			case HUNTERS_LOOT_SACK_MASTER:
+				addSkillMetadata(Skill.HERBLORE, pendingLoot);
+				addSkillMetadata(Skill.WOODCUTTING, pendingLoot);
 		}
 
 		storeEvent(pendingLoot);
