@@ -1,10 +1,13 @@
 package com.Crowdsourcing.loot;
 
 import com.Crowdsourcing.util.BoatLocation;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import net.runelite.api.Client;
 import net.runelite.api.ItemContainer;
+import net.runelite.api.WorldType;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.gameval.DBTableID;
@@ -73,6 +76,8 @@ public class LootMetadata
 	private String ringOfWealth;
 	private String slayerTask;
 	private String slayerMaster;
+	private final List<String> worldTypes = new ArrayList<>();
+	private int worldNumber;
 
 	public LootMetadata(Client client)
 	{
@@ -83,7 +88,8 @@ public class LootMetadata
 		setCombatAchievements();
 		setClueWarnings();
 		setRingOfWealth();
-		setSlayerTask();
+		setSlayerInfo();
+		setWorldInfo();
 	}
 
 	private void setLocation()
@@ -130,7 +136,7 @@ public class LootMetadata
 		}
 	}
 
-	private void setSlayerTask()
+	private void setSlayerInfo()
 	{
 		int slayerTaskQuantity = client.getVarpValue(VarPlayerID.SLAYER_COUNT);
 		if (slayerTaskQuantity > 0)
@@ -167,6 +173,20 @@ public class LootMetadata
 		}
 	}
 
+	private void setWorldInfo()
+	{
+		worldNumber = client.getWorld();
+
+		for (WorldType wt : client.getWorldType())
+		{
+			worldTypes.add(wt.toString());
+		}
+		if (!worldTypes.contains("MEMBERS"))
+		{
+			worldTypes.add("FREE");
+		}
+	}
+
 	public HashMap<String, Object> toMap()
 	{
 		return new HashMap<>() {{
@@ -177,6 +197,8 @@ public class LootMetadata
 			put("ringOfWealth", ringOfWealth);
 			put("slayerTask", slayerTask);
 			put("slayerMaster", slayerMaster);
+			put("worldTypes", worldTypes);
+			put("worldNumber", worldNumber);
 		}};
 	}
 }
