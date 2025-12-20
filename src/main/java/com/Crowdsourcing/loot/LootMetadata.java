@@ -38,113 +38,81 @@ public class LootMetadata
 	);
 	private static final int CLUE_WARNING_ENABLED = 0;
 
-	private static final Map<Integer, String> ROW_MAP = Map.ofEntries(
-		Map.entry(ItemID.RING_OF_WEALTH, "uncharged"),
-		Map.entry(ItemID.RING_OF_WEALTH_I, "uncharged (i)"),
-		Map.entry(ItemID.RING_OF_WEALTH_1, "charged"),
-		Map.entry(ItemID.RING_OF_WEALTH_2, "charged"),
-		Map.entry(ItemID.RING_OF_WEALTH_3, "charged"),
-		Map.entry(ItemID.RING_OF_WEALTH_4, "charged"),
-		Map.entry(ItemID.RING_OF_WEALTH_5, "charged"),
-		Map.entry(ItemID.RING_OF_WEALTH_I1, "charged (i)"),
-		Map.entry(ItemID.RING_OF_WEALTH_I2, "charged (i)"),
-		Map.entry(ItemID.RING_OF_WEALTH_I3, "charged (i)"),
-		Map.entry(ItemID.RING_OF_WEALTH_I4, "charged (i)"),
-		Map.entry(ItemID.RING_OF_WEALTH_I5, "charged (i)")
+	private static final List<Integer> EQUIPMENT_WHITELIST = List.of(
+		ItemID.RING_OF_WEALTH,
+		ItemID.RING_OF_WEALTH_I,
+		ItemID.RING_OF_WEALTH_1,
+		ItemID.RING_OF_WEALTH_2,
+		ItemID.RING_OF_WEALTH_3,
+		ItemID.RING_OF_WEALTH_4,
+		ItemID.RING_OF_WEALTH_5,
+		ItemID.RING_OF_WEALTH_I1,
+		ItemID.RING_OF_WEALTH_I2,
+		ItemID.RING_OF_WEALTH_I3,
+		ItemID.RING_OF_WEALTH_I4,
+		ItemID.RING_OF_WEALTH_I5
 	);
 
-	// https://oldschool.runescape.wiki/w/RuneScape:Varbit/4067
-	private static final Map<Integer, String> SLAYER_MASTERS = Map.of(
-		1, "Turael/Aya",
-		2, "Mazchna/Achtryn",
-		3, "Vannaka",
-		4, "Chaeldar",
-		5, "Duradel/Kuradal",
-		6, "Nieve/Steve",
-		7, "Krystilia",
-		8, "Konar quo Maten",
-		9, "Spria"
-	);
 	private static final int SLAYER_BOSS_TASK_ID = 98;
 
-	private final Client client;
-
-	private WorldPoint location;
-	private int tick;
-	private final Map<String, Boolean> combatAchievements = new HashMap<>();
-	private final Map<String, Boolean> clueWarnings = new HashMap<>();
-	private String ringOfWealth;
-	private String slayerTask;
-	private String slayerMaster;
-	private final List<String> worldTypes = new ArrayList<>();
-	private int worldNumber;
-
-	public LootMetadata(Client client)
-	{
-		this.client = client;
-
-		setLocation();
-		setTick();
-		setCombatAchievements();
-		setClueWarnings();
-		setRingOfWealth();
-		setSlayerInfo();
-		setWorldInfo();
-	}
-
-	private void setLocation()
+	private static WorldPoint getLocation(Client client)
 	{
 		LocalPoint local = LocalPoint.fromWorld(client, client.getLocalPlayer().getWorldLocation());
-		if (local != null)
-		{
-			location = BoatLocation.fromLocal(client, local);
-		}
+		return (local != null) ? BoatLocation.fromLocal(client, local) : null;
 	}
 
-	private void setTick()
+	private static int getTick(Client client)
 	{
-		tick = client.getTickCount();
+		return client.getTickCount();
 	}
 
-	private void setCombatAchievements()
+	private static Map<String, Boolean> getCombatAchievements(Client client)
 	{
+		Map<String, Boolean> combatAchievements = new HashMap<>();
 		VARBITS_CA.forEach((varbitId, caTier) ->
 			combatAchievements.put(caTier, client.getVarbitValue(varbitId) == CA_CLAIMED)
 		);
+		return combatAchievements;
 	}
 
-	private void setClueWarnings()
+	private static Map<String, Boolean> getClueWarnings(Client client)
 	{
+		Map<String, Boolean> clueWarnings = new HashMap<>();
 		VARBITS_CLUE_WARNINGS.forEach((varbitId, clueTier) ->
 			clueWarnings.put(clueTier, client.getVarbitValue(varbitId) == CLUE_WARNING_ENABLED)
 		);
+		return clueWarnings;
 	}
 
-	private void setRingOfWealth()
+	private static List<Integer> getWornItems(Client client)
 	{
+		List<Integer> wornItems = new ArrayList<>();
+
 		ItemContainer equipmentContainer = client.getItemContainer(InventoryID.WORN);
 		if (equipmentContainer != null)
 		{
-			for (Map.Entry<Integer, String> entry : ROW_MAP.entrySet())
+			for (int itemId : EQUIPMENT_WHITELIST)
 			{
-				if (equipmentContainer.contains(entry.getKey()))
+				if (equipmentContainer.contains(itemId))
 				{
-					ringOfWealth = entry.getValue();
-					return;
+					wornItems.add(itemId);
 				}
 			}
 		}
+		return wornItems;
 	}
 
-	private void setSlayerInfo()
+	// dbRow column on https://abextm.github.io/cache2/#/viewer/dbtable/113 uniquely identifies task
+	private static int getSlayerTaskDBRowID(Client client)
 	{
-		int slayerTaskQuantity = client.getVarpValue(VarPlayerID.SLAYER_COUNT);
-		if (slayerTaskQuantity > 0)
+		int taskTableDBRowID = -1;
+
+		// Player currently has task assigned iff slayer_count > 0.
+		// It is not sufficient to check slayer master and/or target, as they can be set without having a task.
+		if (client.getVarpValue(VarPlayerID.SLAYER_COUNT) > 0)
 		{
 			int taskId = client.getVarpValue(VarPlayerID.SLAYER_TARGET);
-
-			int taskDBRow;
-			if (taskId == SLAYER_BOSS_TASK_ID) /* from [proc,helper_slayer_current_assignment] */
+			if (taskId == SLAYER_BOSS_TASK_ID)
 			{
 				var bossRows = client.getDBRowsByValue(
 					DBTableID.SlayerTaskSublist.ID,
@@ -152,31 +120,41 @@ public class LootMetadata
 					0,
 					client.getVarbitValue(VarbitID.SLAYER_TARGET_BOSSID));
 
-				if (bossRows.isEmpty())
+				if (!bossRows.isEmpty())
 				{
-					return;
+					int bossTableDBRowID = bossRows.get(0);
+					taskTableDBRowID = (int) client.getDBTableField(bossTableDBRowID, DBTableID.SlayerTaskSublist.COL_TASK, 0)[0];
 				}
-				taskDBRow = (Integer) client.getDBTableField(bossRows.get(0), DBTableID.SlayerTaskSublist.COL_TASK, 0)[0];
 			}
 			else
 			{
 				var taskRows = client.getDBRowsByValue(DBTableID.SlayerTask.ID, DBTableID.SlayerTask.COL_ID, 0, taskId);
-				if (taskRows.isEmpty())
+				if (!taskRows.isEmpty())
 				{
-					return;
+					taskTableDBRowID = taskRows.get(0);
 				}
-				taskDBRow = taskRows.get(0);
 			}
-
-			slayerTask = (String) client.getDBTableField(taskDBRow, DBTableID.SlayerTask.COL_NAME_UPPERCASE, 0)[0];
-			slayerMaster = SLAYER_MASTERS.get(client.getVarbitValue(VarbitID.SLAYER_MASTER));
 		}
+
+		return taskTableDBRowID;
 	}
 
-	private void setWorldInfo()
+	// see: https://oldschool.runescape.wiki/w/RuneScape:Varbit/4067
+	private static int getSlayerMasterID(Client client)
 	{
-		worldNumber = client.getWorld();
+		int slayerMasterID = -1;
 
+		// Player currently has task assigned iff slayer_count > 0.
+		if (client.getVarpValue(VarPlayerID.SLAYER_COUNT) > 0)
+		{
+			slayerMasterID = client.getVarbitValue(VarbitID.SLAYER_MASTER);
+		}
+		return slayerMasterID;
+	}
+
+	private static List<String> getWorldTypes(Client client)
+	{
+		List<String> worldTypes = new ArrayList<>();
 		for (WorldType wt : client.getWorldType())
 		{
 			worldTypes.add(wt.toString());
@@ -185,20 +163,26 @@ public class LootMetadata
 		{
 			worldTypes.add("FREE");
 		}
+		return worldTypes;
 	}
 
-	public HashMap<String, Object> toMap()
+	private static int getWorldNumber(Client client)
+	{
+		return client.getWorld();
+	}
+
+	public static HashMap<String, Object> getMap(Client client)
 	{
 		return new HashMap<>() {{
-			put("location", location);
-			put("tick", tick);
-			put("combatAchievements", combatAchievements);
-			put("clueWarnings", clueWarnings);
-			put("ringOfWealth", ringOfWealth);
-			put("slayerTask", slayerTask);
-			put("slayerMaster", slayerMaster);
-			put("worldTypes", worldTypes);
-			put("worldNumber", worldNumber);
+			put("location", getLocation(client));
+			put("tick", getTick(client));
+			put("combatAchievements", getCombatAchievements(client));
+			put("clueWarnings", getClueWarnings(client));
+			put("wornItems", getWornItems(client));
+			put("slayerTask", getSlayerTaskDBRowID(client));
+			put("slayerMaster", getSlayerMasterID(client));
+			put("worldTypes", getWorldTypes(client));
+			put("worldNumber", getWorldNumber(client));
 		}};
 	}
 }
