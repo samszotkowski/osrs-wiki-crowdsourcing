@@ -1,5 +1,6 @@
 package com.Crowdsourcing.scenery;
 
+import com.Crowdsourcing.util.BoatLocation;
 import com.google.common.collect.ImmutableSet;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
@@ -78,7 +79,11 @@ public class CrowdsourcingScenery
 			}
 		}
 		LocalPoint local = LocalPoint.fromWorld(client, baseLocation);
-		WorldPoint location = WorldPoint.fromLocalInstance(client, local);
+		if (local == null)
+		{
+			return;
+		}
+		WorldPoint location = BoatLocation.fromLocal(client, local);
 		manager.storeEvent(new SceneryEvent(type, location, id, rate));
 	}
 

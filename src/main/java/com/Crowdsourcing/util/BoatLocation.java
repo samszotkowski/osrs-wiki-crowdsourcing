@@ -15,8 +15,7 @@ public class BoatLocation
 			return null;
 		}
 
-		WorldView wv = client.getLocalPlayer().getWorldView();
-		int wvid = wv.getId();
+		int wvid = local.getWorldView();
 		boolean isOnBoat = wvid != -1;
 		if (isOnBoat)
 		{

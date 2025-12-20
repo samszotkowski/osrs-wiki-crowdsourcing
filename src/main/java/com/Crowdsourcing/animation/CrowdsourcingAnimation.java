@@ -1,6 +1,7 @@
 package com.Crowdsourcing.animation;
 
 import com.Crowdsourcing.CrowdsourcingManager;
+import com.Crowdsourcing.util.BoatLocation;
 import java.util.HashSet;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
@@ -50,7 +51,7 @@ public class CrowdsourcingAnimation
 				{
 					return;
 				}
-				WorldPoint location = WorldPoint.fromLocalInstance(client, local);
+				WorldPoint location = BoatLocation.fromLocal(client, local);
 				boolean isInInstance = client.isInInstancedRegion();
 
 				// Create and send the animation data
@@ -83,7 +84,7 @@ public class CrowdsourcingAnimation
 				{
 					return;
 				}
-				WorldPoint location = WorldPoint.fromLocalInstance(client, local);
+				WorldPoint location = BoatLocation.fromLocal(client, local);
 				boolean isInInstance = client.isInInstancedRegion();
 
 				// Create and send the animation data
