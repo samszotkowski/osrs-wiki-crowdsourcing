@@ -2,6 +2,7 @@ package com.Crowdsourcing.loot;
 
 import com.Crowdsourcing.CrowdsourcingManager;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -13,6 +14,7 @@ import net.runelite.api.events.ChatMessage;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.loottracker.LootReceived;
+import net.runelite.http.api.loottracker.LootRecordType;
 
 @Slf4j
 public class CrowdsourcingLoot
@@ -55,7 +57,7 @@ public class CrowdsourcingLoot
 				event.getName(),
 				drops,
 				event.getAmount(),
-				null,
+				"",
 				LootMetadata.getMap(client)
 			))
 		);
@@ -79,10 +81,10 @@ public class CrowdsourcingLoot
 		{
 			clientThread.invokeLater(() ->
 				manager.storeEvent(new LootData(
-					null,
-					"message",
-					null,
-					0,
+					LootRecordType.UNKNOWN,
+					"MESSAGE",
+					Collections.emptyList(),
+					-1,
 					message,
 					LootMetadata.getMap(client)
 				))

@@ -10,7 +10,6 @@ import net.runelite.api.ItemContainer;
 import net.runelite.api.WorldType;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
-import net.runelite.api.gameval.DBTableID;
 import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.gameval.ItemID;
 import net.runelite.api.gameval.VarPlayerID;
@@ -53,12 +52,19 @@ public class LootMetadata
 		ItemID.RING_OF_WEALTH_I5
 	);
 
-	private static final int SLAYER_BOSS_TASK_ID = 98;
-
-	private static WorldPoint getLocation(Client client)
+	private static Map<String, Integer> getLocation(Client client)
 	{
+		Map<String, Integer> location = new HashMap<>();
+
 		LocalPoint local = LocalPoint.fromWorld(client, client.getLocalPlayer().getWorldLocation());
-		return (local != null) ? BoatLocation.fromLocal(client, local) : null;
+		WorldPoint boatLocation = BoatLocation.fromLocal(client, local);
+		if (boatLocation != null)
+		{
+			location.put("x", boatLocation.getX());
+			location.put("y", boatLocation.getY());
+			location.put("plane", boatLocation.getPlane());
+		}
+		return location;
 	}
 
 	private static int getTick(Client client)
@@ -102,41 +108,17 @@ public class LootMetadata
 		return wornItems;
 	}
 
-	// dbRow column on https://abextm.github.io/cache2/#/viewer/dbtable/113 uniquely identifies task
-	private static int getSlayerTaskDBRowID(Client client)
+	// column 0 on https://abextm.github.io/cache2/#/viewer/dbtable/113
+	private static int getSlayerTaskID(Client client)
 	{
-		int taskTableDBRowID = -1;
+		return client.getVarpValue(VarPlayerID.SLAYER_TARGET);
+	}
 
-		// Player currently has task assigned iff slayer_count > 0.
-		// It is not sufficient to check slayer master and/or target, as they can be set without having a task.
-		if (client.getVarpValue(VarPlayerID.SLAYER_COUNT) > 0)
-		{
-			int taskId = client.getVarpValue(VarPlayerID.SLAYER_TARGET);
-			if (taskId == SLAYER_BOSS_TASK_ID)
-			{
-				var bossRows = client.getDBRowsByValue(
-					DBTableID.SlayerTaskSublist.ID,
-					DBTableID.SlayerTaskSublist.COL_TASK_SUBTABLE_ID,
-					0,
-					client.getVarbitValue(VarbitID.SLAYER_TARGET_BOSSID));
-
-				if (!bossRows.isEmpty())
-				{
-					int bossTableDBRowID = bossRows.get(0);
-					taskTableDBRowID = (int) client.getDBTableField(bossTableDBRowID, DBTableID.SlayerTaskSublist.COL_TASK, 0)[0];
-				}
-			}
-			else
-			{
-				var taskRows = client.getDBRowsByValue(DBTableID.SlayerTask.ID, DBTableID.SlayerTask.COL_ID, 0, taskId);
-				if (!taskRows.isEmpty())
-				{
-					taskTableDBRowID = taskRows.get(0);
-				}
-			}
-		}
-
-		return taskTableDBRowID;
+	// column 1 on https://abextm.github.io/cache2/#/viewer/dbtable/116
+	// corresponds to slayerTaskID == 98
+	private static int getSlayerBossTaskID(Client client)
+	{
+		return client.getVarbitValue(VarbitID.SLAYER_TARGET_BOSSID);
 	}
 
 	// see: https://oldschool.runescape.wiki/w/RuneScape:Varbit/4067
@@ -179,7 +161,8 @@ public class LootMetadata
 			put("combatAchievements", getCombatAchievements(client));
 			put("clueWarnings", getClueWarnings(client));
 			put("wornItems", getWornItems(client));
-			put("slayerTask", getSlayerTaskDBRowID(client));
+			put("slayerTask", getSlayerTaskID(client));
+			put("slayerBossTask", getSlayerBossTaskID(client));
 			put("slayerMaster", getSlayerMasterID(client));
 			put("worldTypes", getWorldTypes(client));
 			put("worldNumber", getWorldNumber(client));
