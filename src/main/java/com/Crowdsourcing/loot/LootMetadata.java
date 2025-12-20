@@ -5,7 +5,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
 import net.runelite.api.Client;
+import net.runelite.api.Item;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.WorldType;
 import net.runelite.api.coords.LocalPoint;
@@ -17,27 +20,10 @@ import net.runelite.api.gameval.VarbitID;
 
 public class LootMetadata
 {
-	private static final Map<Integer, String> VARBITS_CA = Map.of(
-		VarbitID.CA_TIER_STATUS_EASY, "easy",
-		VarbitID.CA_TIER_STATUS_MEDIUM, "medium",
-		VarbitID.CA_TIER_STATUS_HARD, "hard",
-		VarbitID.CA_TIER_STATUS_ELITE, "elite",
-		VarbitID.CA_TIER_STATUS_MASTER, "master",
-		VarbitID.CA_TIER_STATUS_GRANDMASTER, "grandmaster"
-	);
 	private static final int CA_CLAIMED = 2;
-
-	private static final Map<Integer, String> VARBITS_CLUE_WARNINGS = Map.of(
-		VarbitID.OPTION_TRAIL_REMINDER_BEGINNER, "beginner",
-		VarbitID.OPTION_TRAIL_REMINDER_EASY, "easy",
-		VarbitID.OPTION_TRAIL_REMINDER_MEDIUM, "medium",
-		VarbitID.OPTION_TRAIL_REMINDER_HARD, "hard",
-		VarbitID.OPTION_TRAIL_REMINDER_ELITE, "elite",
-		VarbitID.OPTION_TRAIL_REMINDER_MASTER, "master"
-	);
 	private static final int CLUE_WARNING_ENABLED = 0;
 
-	private static final List<Integer> EQUIPMENT_WHITELIST = List.of(
+	private static final Set<Integer> EQUIPMENT_WHITELIST = Set.of(
 		ItemID.RING_OF_WEALTH,
 		ItemID.RING_OF_WEALTH_I,
 		ItemID.RING_OF_WEALTH_1,
@@ -74,20 +60,28 @@ public class LootMetadata
 
 	private static Map<String, Boolean> getCombatAchievements(Client client)
 	{
-		Map<String, Boolean> combatAchievements = new HashMap<>();
-		VARBITS_CA.forEach((varbitId, caTier) ->
-			combatAchievements.put(caTier, client.getVarbitValue(varbitId) == CA_CLAIMED)
+		Function<Integer, Boolean> isClaimed = id -> client.getVarbitValue(id) == CA_CLAIMED;
+		return Map.of(
+			"easy", isClaimed.apply(VarbitID.CA_TIER_STATUS_EASY),
+			"medium", isClaimed.apply(VarbitID.CA_TIER_STATUS_MEDIUM),
+			"hard",isClaimed.apply(VarbitID.CA_TIER_STATUS_HARD),
+			"elite",isClaimed.apply(VarbitID.CA_TIER_STATUS_ELITE),
+			"master",isClaimed.apply(VarbitID.CA_TIER_STATUS_MASTER),
+			"grandmaster",isClaimed.apply(VarbitID.CA_TIER_STATUS_GRANDMASTER)
 		);
-		return combatAchievements;
 	}
 
 	private static Map<String, Boolean> getClueWarnings(Client client)
 	{
-		Map<String, Boolean> clueWarnings = new HashMap<>();
-		VARBITS_CLUE_WARNINGS.forEach((varbitId, clueTier) ->
-			clueWarnings.put(clueTier, client.getVarbitValue(varbitId) == CLUE_WARNING_ENABLED)
+		Function<Integer, Boolean> isEnabled = id -> client.getVarbitValue(id) == CLUE_WARNING_ENABLED;
+		return Map.of(
+			"beginner", isEnabled.apply(VarbitID.OPTION_TRAIL_REMINDER_BEGINNER),
+			"easy", isEnabled.apply(VarbitID.OPTION_TRAIL_REMINDER_EASY),
+			"medium", isEnabled.apply(VarbitID.OPTION_TRAIL_REMINDER_MEDIUM),
+			"hard", isEnabled.apply(VarbitID.OPTION_TRAIL_REMINDER_HARD),
+			"elite", isEnabled.apply(VarbitID.OPTION_TRAIL_REMINDER_ELITE),
+			"master", isEnabled.apply(VarbitID.OPTION_TRAIL_REMINDER_MASTER)
 		);
-		return clueWarnings;
 	}
 
 	private static List<Integer> getWornItems(Client client)
@@ -97,9 +91,10 @@ public class LootMetadata
 		ItemContainer equipmentContainer = client.getItemContainer(InventoryID.WORN);
 		if (equipmentContainer != null)
 		{
-			for (int itemId : EQUIPMENT_WHITELIST)
+			for (Item item : equipmentContainer.getItems())
 			{
-				if (equipmentContainer.contains(itemId))
+				int itemId = item.getId();
+				if (EQUIPMENT_WHITELIST.contains(itemId))
 				{
 					wornItems.add(itemId);
 				}
@@ -119,6 +114,12 @@ public class LootMetadata
 	private static int getSlayerBossTaskID(Client client)
 	{
 		return client.getVarbitValue(VarbitID.SLAYER_TARGET_BOSSID);
+	}
+
+	// Not to be confused with VarPlayerID.SLAYER_COUNT_ORIGINAL
+	private static int getSlayerTaskRemainingCount(Client client)
+	{
+		return client.getVarpValue(VarPlayerID.SLAYER_COUNT);
 	}
 
 	// see: https://oldschool.runescape.wiki/w/RuneScape:Varbit/4067
@@ -161,9 +162,10 @@ public class LootMetadata
 			put("combatAchievements", getCombatAchievements(client));
 			put("clueWarnings", getClueWarnings(client));
 			put("wornItems", getWornItems(client));
-			put("slayerTask", getSlayerTaskID(client));
-			put("slayerBossTask", getSlayerBossTaskID(client));
-			put("slayerMaster", getSlayerMasterID(client));
+			put("slayerTaskID", getSlayerTaskID(client));
+			put("slayerBossTaskID", getSlayerBossTaskID(client));
+			put("slayerTaskRemainingCount", getSlayerTaskRemainingCount(client));
+			put("slayerMasterID", getSlayerMasterID(client));
 			put("worldTypes", getWorldTypes(client));
 			put("worldNumber", getWorldNumber(client));
 		}};
