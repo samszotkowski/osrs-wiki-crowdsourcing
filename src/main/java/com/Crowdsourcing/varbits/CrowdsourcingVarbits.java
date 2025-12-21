@@ -39,6 +39,7 @@ import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.VarbitChanged;
+import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.api.gameval.VarbitID;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.Subscribe;
@@ -64,7 +65,8 @@ public class CrowdsourcingVarbits
 
 	private int initializingTick = 0;
 
-	private static HashSet<Integer> blackList;
+	private static HashSet<Integer> varbitBlackList;
+	private static HashSet<Integer> varPlayerBlackList;
 
 	private static final int VARBIT = 0;
 	private static final int VARPLAYER = 1;
@@ -73,11 +75,16 @@ public class CrowdsourcingVarbits
 	{
 
 		// Blacklist certain common varbs that give us little useful data.
-		blackList = new HashSet<>();
-		blackList.add(VarbitID.COMBAT_WEAPON_CATEGORY); // Equipped weapon type
-		blackList.add(VarbitID.SETTINGS_BARBARIAN_POTION_MAKEX); // Dialogue option appear/disappear
-		blackList.add(VarbitID.CLOCK); // 100 tick counter
+		varbitBlackList = new HashSet<>();
+		varbitBlackList.add(VarbitID.COMBAT_WEAPON_CATEGORY); // Equipped weapon type
+		varbitBlackList.add(VarbitID.SETTINGS_BARBARIAN_POTION_MAKEX); // Dialogue option appear/disappear
+		varbitBlackList.add(VarbitID.CLOCK); // 100 tick counter
 		varbits = HashMultimap.create();
+
+		varPlayerBlackList = new HashSet<>();
+		varPlayerBlackList.add(VarPlayerID.DATE_VARS);
+		varPlayerBlackList.add(VarPlayerID.DATE_MINUTES);
+		varPlayerBlackList.add(VarPlayerID.MAP_CLOCK);
 
 		if (client.getGameState() == GameState.STARTING || client.getGameState() == GameState.UNKNOWN)
 		{
@@ -146,7 +153,12 @@ public class CrowdsourcingVarbits
 		int tick = client.getTickCount();
 
 		// Whenever a varbit is changed, record it and pass the info off to be submitted.
-		int index = varbitChanged.getIndex();
+		int index = varbitChanged.getVarpId();
+		if (varPlayerBlackList.contains(index))
+		{
+			return;
+		}
+
 		int[] varps = client.getVarps();
 
 		for (int i : varbits.get(index))
@@ -159,7 +171,7 @@ public class CrowdsourcingVarbits
 			if (oldValue != newValue && tick > initializingTick)
 			{
 				client.setVarbitValue(oldVarps2, i, newValue);
-				if (!blackList.contains(i))
+				if (!varbitBlackList.contains(i))
 				{
 					/* Wait a tick before grabbing location.
 					 *
@@ -177,7 +189,7 @@ public class CrowdsourcingVarbits
 
 						VarData varbitData = new VarData(VARBIT, i, oldValue, newValue, tick, isInInstance, location);
 						crowdsourcingManager.storeEvent(varbitData);
-						// log.info(varbitData.toString());
+//						log.info(varbitData.toString());
 					});
 				}
 			}
@@ -196,7 +208,7 @@ public class CrowdsourcingVarbits
 
 				VarData varPlayerData = new VarData(VARPLAYER, index, oldValue, newValue, tick, isInInstance, location);
 				crowdsourcingManager.storeEvent(varPlayerData);
-				// log.info(varPlayerData.toString());
+//				log.info(varPlayerData.toString());
 			});
 		}
 
