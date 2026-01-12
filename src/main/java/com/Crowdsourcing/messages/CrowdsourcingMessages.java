@@ -63,6 +63,7 @@ public class CrowdsourcingMessages
 	private static final String ZOGRE_COFFIN_SUCCESS = "You unlock the coffin...";
 	private static final String ZOGRE_COFFIN_FAIL = "You fail to pick the lock - your fingers get numb from fumbling with the lock.";
 	private static final String ZOGRE_COFFIN_LOCKPICK_SNAPS = "Your lockpick snaps.";
+	private static final String ZOGRE_COFFIN_DISEASE = "Your clumsiness releases a disease ridden spore cloud.";
 
 	// Pickable doors (Yanille dungeon and Ross' door for example)
 	private static final String PICKLOCK_DOOR_SUCCESS = "You manage to pick the lock.";
@@ -248,7 +249,8 @@ public class CrowdsourcingMessages
 
 		if (ZOGRE_COFFIN_SUCCESS.equals(message)
 			|| ZOGRE_COFFIN_FAIL.equals(message)
-			|| ZOGRE_COFFIN_LOCKPICK_SNAPS.equals(message))
+			|| ZOGRE_COFFIN_LOCKPICK_SNAPS.equals(message)
+			|| ZOGRE_COFFIN_DISEASE.equals(message))
 		{
 			boolean hasLockpick = false;
 			boolean hasHairClip = false;
