@@ -58,7 +58,7 @@ public class CrowdsourcingLoot
 				drops,
 				event.getAmount(),
 				"",
-				LootMetadata.getMap(client)
+				LootMetadata.getMap(client, event.getMetadata())
 			))
 		);
 	}
@@ -86,7 +86,7 @@ public class CrowdsourcingLoot
 					Collections.emptyList(),
 					-1,
 					message,
-					LootMetadata.getMap(client)
+					LootMetadata.getMap(client, -1)
 				))
 			);
 		}

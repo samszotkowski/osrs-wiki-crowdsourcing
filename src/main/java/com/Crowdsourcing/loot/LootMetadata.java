@@ -154,7 +154,7 @@ public class LootMetadata
 		return client.getWorld();
 	}
 
-	public static HashMap<String, Object> getMap(Client client)
+	public static HashMap<String, Object> getMap(Client client, Object lootTrackerMetadata)
 	{
 		return new HashMap<>() {{
 			put("location", getLocation(client));
@@ -168,6 +168,7 @@ public class LootMetadata
 			put("slayerMasterID", getSlayerMasterID(client));
 			put("worldTypes", getWorldTypes(client));
 			put("worldNumber", getWorldNumber(client));
+			put("lootTrackerMetadata", lootTrackerMetadata != null ? lootTrackerMetadata : -1);
 		}};
 	}
 }
