@@ -79,10 +79,11 @@ public class CrowdsourcingVarbits
 		varbitBlackList.add(VarbitID.COMBAT_WEAPON_CATEGORY); // Equipped weapon type
 		varbitBlackList.add(VarbitID.SETTINGS_BARBARIAN_POTION_MAKEX); // Dialogue option appear/disappear
 		varbitBlackList.add(VarbitID.CLOCK); // 100 tick counter
+		varbitBlackList.add(VarbitID.DATE_MILLISECONDS_PAST_MINUTE);
+		varbitBlackList.add(VarbitID.DATE_SECONDS_PAST_MINUTE);
 		varbits = HashMultimap.create();
 
 		varPlayerBlackList = new HashSet<>();
-		varPlayerBlackList.add(VarPlayerID.DATE_VARS);
 		varPlayerBlackList.add(VarPlayerID.DATE_MINUTES);
 		varPlayerBlackList.add(VarPlayerID.MAP_CLOCK);
 
