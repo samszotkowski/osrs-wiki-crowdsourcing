@@ -63,6 +63,7 @@ public class CrowdsourcingMessages
 	private static final String ZOGRE_COFFIN_SUCCESS = "You unlock the coffin...";
 	private static final String ZOGRE_COFFIN_FAIL = "You fail to pick the lock - your fingers get numb from fumbling with the lock.";
 	private static final String ZOGRE_COFFIN_LOCKPICK_SNAPS = "Your lockpick snaps.";
+	private static final String ZOGRE_COFFIN_DISEASE = "Your clumsiness releases a disease ridden spore cloud.";
 
 	// Pickable doors (Yanille dungeon and Ross' door for example)
 	private static final String PICKLOCK_DOOR_SUCCESS = "You manage to pick the lock.";
@@ -219,10 +220,7 @@ public class CrowdsourcingMessages
 			return createSkillMap(Skill.THIEVING);
 		}
 
-		if (ZOGRE_COFFIN_SUCCESS.equals(message)
-			|| ZOGRE_COFFIN_FAIL.equals(message)
-			|| ZOGRE_COFFIN_LOCKPICK_SNAPS.equals(message)
-			|| PICKLOCK_DOOR_SUCCESS.equals(message)
+		if (PICKLOCK_DOOR_SUCCESS.equals(message)
 			|| PICKLOCK_DOOR_FAIL.equals(message)
 			|| PICKLOCK_DOOR_TRAP.equals(message)
 			|| PICKLOCK_CHEST_SUCCESS.equals(message)
@@ -246,6 +244,35 @@ public class CrowdsourcingMessages
 			HashMap<String, Object> h = createSkillMap(Skill.THIEVING);
 			h.put("Lockpick", hasLockpick);
 			h.put("Hairclip", hasHairClip);
+			return h;
+		}
+
+		if (ZOGRE_COFFIN_SUCCESS.equals(message)
+			|| ZOGRE_COFFIN_FAIL.equals(message)
+			|| ZOGRE_COFFIN_LOCKPICK_SNAPS.equals(message)
+			|| ZOGRE_COFFIN_DISEASE.equals(message))
+		{
+			boolean hasLockpick = false;
+			boolean hasHairClip = false;
+			ItemContainer equipContainer = client.getItemContainer(InventoryID.INV);
+			if (equipContainer != null)
+			{
+				final Item[] items = equipContainer.getItems();
+				for (Item item : items)
+				{
+					if (item.getId() == ItemID.LOCKPICK)
+						hasLockpick = true;
+					else if (item.getId() == ItemID.KR_HAIRCLIP)
+						hasHairClip = true;
+				}
+			}
+			HashMap<String, Object> h = createSkillMap(Skill.THIEVING);
+			h.put("Lockpick", hasLockpick);
+			h.put("Hairclip", hasHairClip);
+
+			Skill agility = Skill.AGILITY;
+			h.put(agility.getName(), client.getRealSkillLevel(agility));
+			h.put("B" + agility.getName(), client.getBoostedSkillLevel(agility));
 			return h;
 		}
 
