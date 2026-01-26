@@ -158,6 +158,10 @@ public class CrowdsourcingMessages
 	private static final String LEAVES_TRAP_SUCCESS = "You safely jump across.";
 	private static final String LEAVES_TRAP_FAILURE = "You try to jump across but you slip and fall.";
 
+	// Cell door (Port Roberts)
+	private static final String CELL_DOOR_FAILURE = "You attempt to pick the lock on the cell door, but fail to do so.";
+	private static final String CELL_DOOR_SUCCESS = "You attempt to pick the lock on the cell door, and succeed in doing so.";
+
 	// Slug Menace air, earth, fire, mind and water blank rune
 	private static final String BLANK_RUNE_SUCCESS = "You manage to shape the rune essence into the desired shape.";
 	private static final String BLANK_RUNE_FAILURE = "You attempt to craft the stone but fail, destroying the essence.";
@@ -229,7 +233,9 @@ public class CrowdsourcingMessages
 			|| PICKLOCK_DOOR_TRAP.equals(message)
 			|| PICKLOCK_CHEST_SUCCESS.equals(message)
 			|| PICKLOCK_CHEST_FAIL.equals(message)
-			|| PICKLOCK_CHEST_TRAP.equals(message))
+			|| PICKLOCK_CHEST_TRAP.equals(message)
+			|| CELL_DOOR_FAILURE.equals(message)
+			|| CELL_DOOR_SUCCESS.equals(message))
 		{
 			boolean hasLockpick = false;
 			boolean hasHairClip = false;
