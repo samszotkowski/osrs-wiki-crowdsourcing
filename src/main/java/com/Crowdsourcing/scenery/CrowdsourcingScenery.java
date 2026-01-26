@@ -79,10 +79,6 @@ public class CrowdsourcingScenery
 			}
 		}
 		LocalPoint local = LocalPoint.fromWorld(client, baseLocation);
-		if (local == null)
-		{
-			return;
-		}
 		WorldPoint location = BoatLocation.fromLocal(client, local);
 		manager.storeEvent(new SceneryEvent(type, location, id, rate));
 	}
