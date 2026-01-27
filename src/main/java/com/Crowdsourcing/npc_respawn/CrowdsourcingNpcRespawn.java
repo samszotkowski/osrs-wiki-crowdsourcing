@@ -1,6 +1,7 @@
 package com.Crowdsourcing.npc_respawn;
 
 import com.Crowdsourcing.CrowdsourcingManager;
+import com.Crowdsourcing.util.BoatLocation;
 import javax.inject.Inject;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
@@ -63,7 +64,7 @@ public class CrowdsourcingNpcRespawn {
             boolean isInInstance = false;
             if (local != null)
             {
-                location = WorldPoint.fromLocalInstance(client, local);
+                location = BoatLocation.fromLocal(client, local);
                 isInInstance = client.isInInstancedRegion();
             }
             manager.storeEvent(new NpcRespawnData(index, npc.getId(), respawnTime, location, isInInstance));

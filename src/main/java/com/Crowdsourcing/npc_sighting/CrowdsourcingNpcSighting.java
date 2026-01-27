@@ -1,5 +1,6 @@
 package com.Crowdsourcing.npc_sighting;
 
+import com.Crowdsourcing.util.BoatLocation;
 import com.google.common.collect.ImmutableSet;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
@@ -71,7 +72,7 @@ public class CrowdsourcingNpcSighting
 		{
 			return;
 		}
-		WorldPoint location = WorldPoint.fromLocalInstance(client, local);
+		WorldPoint location = BoatLocation.fromLocal(client, local);
 		boolean isInInstance = client.isInInstancedRegion();
 		NpcSightingData data = new NpcSightingData(id, index, rate, isSpawn, world, isInInstance, location);
 		manager.storeEvent(data);
