@@ -31,9 +31,6 @@ public class CrowdsourcingLoot
 	// Clues
 	private static final Pattern CLUE_WARNING_MESSAGE = Pattern.compile("You have a sneaking suspicion.*");
 
-	// Rogue outfit
-	private static final String ROGUE_MESSAGE = "Your rogue clothing allows you to steal twice as much loot!";
-
 	// Fishing/mining standard messages
 	// "You catch a swordfish.", "You catch some shrimps.", "You catch a shark!", "You catch a scroll box!"
 	private static final Pattern FISHING_PATTERN = Pattern.compile("You catch .*");
@@ -74,7 +71,6 @@ public class CrowdsourcingLoot
 
 		String message = event.getMessage();
 		if (CLUE_WARNING_MESSAGE.matcher(message).matches() ||
-			ROGUE_MESSAGE.equals(message) ||
 			FISHING_PATTERN.matcher(message).matches() ||
 			MINING_PATTERN.matcher(message).matches() ||
 			MINING_CLUE_MESSAGE.equals(message))
