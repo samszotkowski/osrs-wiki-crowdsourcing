@@ -39,6 +39,7 @@ public class CrowdsourcingLoot
 	private static final String MINING_CLUE_MESSAGE = "You find a scroll box!";
 	private static final String MOON_KEY_MESSAGE = "You find a key half!";
 	private static final String BONE_SHARD_MESSAGE = "You manage to chip off some bone shards.";
+	private static final String ENT_SEED_MESSAGE = "An ent seed falls out of the tree!";
 
 	@Subscribe
 	public void onLootReceived(LootReceived event)
@@ -79,7 +80,8 @@ public class CrowdsourcingLoot
 			WOODCUTTING_PATTERN.matcher(message).matches() ||
 			MINING_CLUE_MESSAGE.equals(message) ||
 			MOON_KEY_MESSAGE.equals(message) ||
-			BONE_SHARD_MESSAGE.equals(message))
+			BONE_SHARD_MESSAGE.equals(message) ||
+			ENT_SEED_MESSAGE.equals(message))
 		{
 			clientThread.invokeLater(() ->
 				manager.storeEvent(new LootData(
