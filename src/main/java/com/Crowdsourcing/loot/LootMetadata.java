@@ -10,6 +10,7 @@ import java.util.function.Function;
 import net.runelite.api.Client;
 import net.runelite.api.Item;
 import net.runelite.api.ItemContainer;
+import net.runelite.api.Skill;
 import net.runelite.api.WorldType;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
@@ -37,6 +38,8 @@ public class LootMetadata
 		ItemID.RING_OF_WEALTH_I4,
 		ItemID.RING_OF_WEALTH_I5
 	);
+
+	private static final String LEAGUES_WORLD_TYPE = WorldType.SEASONAL.toString();
 
 	private static Map<String, Integer> getLocation(Client client)
 	{
@@ -154,9 +157,33 @@ public class LootMetadata
 		return client.getWorld();
 	}
 
+	private static List<Integer> getLeagueRelics(Client client)
+	{
+		return List.of(
+			client.getVarbitValue(VarbitID.LEAGUE_RELIC_SELECTION_0),
+			client.getVarbitValue(VarbitID.LEAGUE_RELIC_SELECTION_1),
+			client.getVarbitValue(VarbitID.LEAGUE_RELIC_SELECTION_2),
+			client.getVarbitValue(VarbitID.LEAGUE_RELIC_SELECTION_3),
+			client.getVarbitValue(VarbitID.LEAGUE_RELIC_SELECTION_4),
+			client.getVarbitValue(VarbitID.LEAGUE_RELIC_SELECTION_5),
+			client.getVarbitValue(VarbitID.LEAGUE_RELIC_SELECTION_6),
+			client.getVarbitValue(VarbitID.LEAGUE_RELIC_SELECTION_7)
+		);
+	}
+
+	private static Map<String, Integer> getLeagueLevels(Client client)
+	{
+		HashMap<String, Integer> h = new HashMap<>();
+		for (Skill s : List.of(Skill.WOODCUTTING, Skill.MINING, Skill.FISHING))
+		{
+			h.put(s.getName(), client.getBoostedSkillLevel(s));
+		}
+		return h;
+	}
+
 	public static HashMap<String, Object> getMap(Client client, Object lootTrackerMetadata)
 	{
-		return new HashMap<>() {{
+		HashMap<String, Object> metadata = new HashMap<>() {{
 			put("location", getLocation(client));
 			put("tick", getTick(client));
 			put("combatAchievements", getCombatAchievements(client));
@@ -166,9 +193,18 @@ public class LootMetadata
 			put("slayerBossTaskID", getSlayerBossTaskID(client));
 			put("slayerTaskRemainingCount", getSlayerTaskRemainingCount(client));
 			put("slayerMasterID", getSlayerMasterID(client));
-			put("worldTypes", getWorldTypes(client));
 			put("worldNumber", getWorldNumber(client));
 			put("lootTrackerMetadata", lootTrackerMetadata != null ? lootTrackerMetadata : -1);
 		}};
+
+		List<String> worldTypes = getWorldTypes(client);
+		metadata.put("worldTypes", worldTypes);
+		if (worldTypes.contains(LEAGUES_WORLD_TYPE))
+		{
+			metadata.put("leagueRelics", getLeagueRelics(client));
+			metadata.put("leagueLevels", getLeagueLevels(client));
+		}
+
+		return metadata;
 	}
 }
