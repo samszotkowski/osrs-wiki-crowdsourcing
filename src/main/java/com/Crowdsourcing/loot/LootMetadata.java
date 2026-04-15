@@ -173,12 +173,11 @@ public class LootMetadata
 
 	private static Map<String, Integer> getLeagueLevels(Client client)
 	{
-		HashMap<String, Integer> h = new HashMap<>();
-		for (Skill s : List.of(Skill.WOODCUTTING, Skill.MINING, Skill.FISHING))
-		{
-			h.put(s.getName(), client.getBoostedSkillLevel(s));
-		}
-		return h;
+		return Map.of(
+			"WOODCUTTING", client.getBoostedSkillLevel(Skill.WOODCUTTING),
+			"MINING", client.getBoostedSkillLevel(Skill.MINING),
+			"FISHING", client.getBoostedSkillLevel(Skill.FISHING)
+		);
 	}
 
 	public static HashMap<String, Object> getMap(Client client, Object lootTrackerMetadata)
