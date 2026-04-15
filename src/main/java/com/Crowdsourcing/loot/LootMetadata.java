@@ -174,9 +174,12 @@ public class LootMetadata
 	private static Map<String, Integer> getLeagueLevels(Client client)
 	{
 		return Map.of(
-			"WOODCUTTING", client.getBoostedSkillLevel(Skill.WOODCUTTING),
-			"MINING", client.getBoostedSkillLevel(Skill.MINING),
-			"FISHING", client.getBoostedSkillLevel(Skill.FISHING)
+			"BWOODCUTTING", client.getBoostedSkillLevel(Skill.WOODCUTTING),
+			"WOODCUTTING", client.getRealSkillLevel(Skill.WOODCUTTING),
+			"BMINING", client.getBoostedSkillLevel(Skill.MINING),
+			"MINING", client.getRealSkillLevel(Skill.MINING),
+			"BFISHING", client.getBoostedSkillLevel(Skill.FISHING),
+			"FISHING", client.getRealSkillLevel(Skill.FISHING)
 		);
 	}
 
