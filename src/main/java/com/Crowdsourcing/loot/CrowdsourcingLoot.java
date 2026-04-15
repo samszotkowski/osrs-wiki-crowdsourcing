@@ -33,9 +33,13 @@ public class CrowdsourcingLoot
 
 	// Fishing/mining standard messages
 	// "You catch a swordfish.", "You catch some shrimps.", "You catch a shark!", "You catch a scroll box!"
-	private static final Pattern FISHING_PATTERN = Pattern.compile("You catch .*");
-	private static final Pattern MINING_PATTERN = Pattern.compile("You manage to mine some .*");
+	private static final Pattern FISHING_PATTERN = Pattern.compile("You catch.*");
+	private static final Pattern MINING_PATTERN = Pattern.compile("You manage to mine.*");
+	private static final Pattern WOODCUTTING_PATTERN = Pattern.compile("You get some.*logs.*");
 	private static final String MINING_CLUE_MESSAGE = "You find a scroll box!";
+	private static final String MOON_KEY_MESSAGE = "You find a key half!";
+	private static final String BONE_SHARD_MESSAGE = "You manage to chip off some bone shards.";
+	private static final String ENT_SEED_MESSAGE = "An ent seed falls out of the tree!";
 
 	@Subscribe
 	public void onLootReceived(LootReceived event)
@@ -73,7 +77,11 @@ public class CrowdsourcingLoot
 		if (CLUE_WARNING_MESSAGE.matcher(message).matches() ||
 			FISHING_PATTERN.matcher(message).matches() ||
 			MINING_PATTERN.matcher(message).matches() ||
-			MINING_CLUE_MESSAGE.equals(message))
+			WOODCUTTING_PATTERN.matcher(message).matches() ||
+			MINING_CLUE_MESSAGE.equals(message) ||
+			MOON_KEY_MESSAGE.equals(message) ||
+			BONE_SHARD_MESSAGE.equals(message) ||
+			ENT_SEED_MESSAGE.equals(message))
 		{
 			clientThread.invokeLater(() ->
 				manager.storeEvent(new LootData(
