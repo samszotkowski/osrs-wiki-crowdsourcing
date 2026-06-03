@@ -67,10 +67,10 @@ public class LootMetadata
 		return Map.of(
 			"easy", isClaimed.apply(VarbitID.CA_TIER_STATUS_EASY),
 			"medium", isClaimed.apply(VarbitID.CA_TIER_STATUS_MEDIUM),
-			"hard",isClaimed.apply(VarbitID.CA_TIER_STATUS_HARD),
-			"elite",isClaimed.apply(VarbitID.CA_TIER_STATUS_ELITE),
-			"master",isClaimed.apply(VarbitID.CA_TIER_STATUS_MASTER),
-			"grandmaster",isClaimed.apply(VarbitID.CA_TIER_STATUS_GRANDMASTER)
+			"hard", isClaimed.apply(VarbitID.CA_TIER_STATUS_HARD),
+			"elite", isClaimed.apply(VarbitID.CA_TIER_STATUS_ELITE),
+			"master", isClaimed.apply(VarbitID.CA_TIER_STATUS_MASTER),
+			"grandmaster", isClaimed.apply(VarbitID.CA_TIER_STATUS_GRANDMASTER)
 		);
 	}
 
@@ -183,9 +183,21 @@ public class LootMetadata
 		);
 	}
 
+	private static List<Integer> getPortTaskID(Client client)
+	{
+		return List.of(
+			client.getVarbitValue(VarbitID.PORT_TASK_SLOT_0_ID),
+			client.getVarbitValue(VarbitID.PORT_TASK_SLOT_1_ID),
+			client.getVarbitValue(VarbitID.PORT_TASK_SLOT_2_ID),
+			client.getVarbitValue(VarbitID.PORT_TASK_SLOT_3_ID),
+			client.getVarbitValue(VarbitID.PORT_TASK_SLOT_4_ID)
+		);
+	}
+
 	public static HashMap<String, Object> getMap(Client client, Object lootTrackerMetadata)
 	{
-		HashMap<String, Object> metadata = new HashMap<>() {{
+		HashMap<String, Object> metadata = new HashMap<>()
+		{{
 			put("location", getLocation(client));
 			put("tick", getTick(client));
 			put("combatAchievements", getCombatAchievements(client));
@@ -197,6 +209,7 @@ public class LootMetadata
 			put("slayerMasterID", getSlayerMasterID(client));
 			put("worldNumber", getWorldNumber(client));
 			put("lootTrackerMetadata", lootTrackerMetadata != null ? lootTrackerMetadata : -1);
+			put("portTaskID", getPortTaskID(client));
 		}};
 
 		List<String> worldTypes = getWorldTypes(client);
